@@ -4,7 +4,7 @@ export type IdType = "ghana_card" | "voter_id" | "passport";
 export type LoanStatus = "pending" | "approved" | "disbursed" | "active" | "fully_paid" | "defaulted";
 export type AccountType = "regular" | "fixed_deposit" | "susu";
 export type PaymentMethod = "cash" | "bank_transfer" | "mtn_momo" | "vodafone_cash" | "airteltigo_money";
-export type TransactionType = "deposit" | "withdrawal" | "loan_disbursement" | "loan_repayment" | "interest" | "fee" | "transfer";
+export type TransactionType = "deposit" | "withdrawal" | "loan_disbursement" | "loan_repayment" | "interest_payment" | "penalty_payment" | "interest" | "fee" | "transfer";
 export type Role = "admin" | "manager" | "staff" | "customer";
 
 // Define interfaces for common objects
@@ -49,6 +49,7 @@ export interface Transaction {
 }
 
 export interface LoanGuarantor {
+  id: string; // Added id property which was missing in the type definition
   loan_id: string;
   full_name: string;
   phone_number: string;

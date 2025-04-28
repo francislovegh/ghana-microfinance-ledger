@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -72,25 +71,24 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Props) => 
     setLoading(true);
     
     try {
-      // Generate transaction number
       const { data: transactionNumber, error: numberError } = await supabase
         .rpc('generate_transaction_number');
       
       if (numberError) throw numberError;
       
-      // Process the transaction
       const newBalance = type === "deposit" 
         ? account.balance + amount 
         : account.balance - amount;
         
-      // Record the transaction
+      const transactionType: TransactionType = type === "deposit" ? "deposit" : "withdrawal";
+      
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
           account_id: account.id,
           user_id: account.user_id,
           amount: amount,
-          transaction_type: type as TransactionType,
+          transaction_type: transactionType,
           payment_method: paymentMethod,
           transaction_number: transactionNumber,
           reference_number: reference || null,
@@ -100,7 +98,6 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Props) => 
       
       if (transactionError) throw transactionError;
       
-      // Update account balance
       const { error: balanceError } = await supabase
         .from('savings_accounts')
         .update({ balance: newBalance })

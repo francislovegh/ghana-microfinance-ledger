@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -33,7 +32,16 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
   const [customers, setCustomers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [guarantors, setGuarantors] = useState<LoanGuarantor[]>([
-    { id: nanoid(), full_name: "", phone_number: "", relationship: "", id_type: "ghana_card", id_number: "", address: "" }
+    { 
+      id: nanoid(), 
+      loan_id: "", 
+      full_name: "", 
+      phone_number: "", 
+      relationship: "", 
+      id_type: "ghana_card", 
+      id_number: "", 
+      address: "" 
+    }
   ]);
   const { toast } = useToast();
 
@@ -72,6 +80,7 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
   const addGuarantor = () => {
     setGuarantors([...guarantors, {
       id: nanoid(),
+      loan_id: "",
       full_name: "",
       phone_number: "",
       relationship: "",
