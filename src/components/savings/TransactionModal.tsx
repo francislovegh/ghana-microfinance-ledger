@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,21 +9,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { ArrowUpCircle, ArrowDownCircle } from "lucide-react";
-
-type TransactionType = "deposit" | "withdrawal";
-type PaymentMethod = "cash" | "bank_transfer" | "mtn_momo" | "vodafone_cash" | "airteltigo_money";
 
 interface SavingsAccount {
   id: string;
   account_number: string;
   user_id: string;
+  account_type: AccountType;
   balance: number;
-  account_type: string;
-  profiles?: {
+  interest_rate: number;
+  maturity_date: string | null;
+  is_active: boolean;
+  profiles: {
     full_name: string;
-  };
+  } | null;
 }
 
 interface TransactionModalProps {
@@ -30,7 +31,7 @@ interface TransactionModalProps {
   onClose: () => void;
   onSave: () => void;
   account: SavingsAccount;
-  type: TransactionType;
+  type: "deposit" | "withdrawal";
 }
 
 interface FormValues {
@@ -45,7 +46,7 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
   const [userDetails, setUserDetails] = useState<{ id: string } | null>(null);
   const { toast } = useToast();
   
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
       amount: "",
       payment_method: "cash",
@@ -94,61 +95,60 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
       
       const amount = parseFloat(data.amount);
       
-      // Validation for withdrawal
+      // For withdrawals, check if account has sufficient funds
       if (type === "withdrawal" && amount > account.balance) {
         toast({
           title: "Insufficient funds",
-          description: "Withdrawal amount exceeds available balance",
+          description: `The account balance is ₵${account.balance.toFixed(2)}, which is less than the withdrawal amount.`,
           variant: "destructive",
         });
         return;
       }
       
+      // Generate transaction number
+      const { data: txnNumberData } = await supabase.rpc('generate_transaction_number');
+      const transaction_number = txnNumberData || `TX-${Date.now()}`;
+      
       // Create transaction record
-      const transactionData = {
-        account_id: account.id,
-        user_id: account.user_id,
-        amount: amount,
-        transaction_type: type,
-        payment_method: data.payment_method,
-        reference_number: data.reference_number || null,
-        description: data.description || null,
-        performed_by: userDetails.id
-      };
-      
-      // Update the account balance
-      const newBalance = type === "deposit" 
-        ? account.balance + amount 
-        : account.balance - amount;
-      
-      // Try to use a custom RPC function directly instead of using rpc()
-      let transactionSuccess = false;
-      
-      // Manually handle the transaction with multiple operations
-      // 1. Insert transaction record
       const { error: transactionError } = await supabase
         .from("transactions")
-        .insert(transactionData);
-      
+        .insert({
+          account_id: account.id,
+          user_id: account.user_id,
+          amount: amount,
+          transaction_type: type as TransactionType,
+          payment_method: data.payment_method as PaymentMethod,
+          reference_number: data.reference_number || null,
+          description: data.description || null,
+          performed_by: userDetails.id,
+          transaction_number: transaction_number
+        });
+        
       if (transactionError) {
         toast({
-          title: "Failed to record transaction",
+          title: "Error creating transaction record",
           description: transactionError.message,
           variant: "destructive",
         });
         return;
       }
       
-      // 2. Update account balance
-      const { error: updateError } = await supabase
+      // Update account balance
+      const newBalance = type === "deposit" 
+        ? account.balance + amount 
+        : account.balance - amount;
+        
+      const { error: accountError } = await supabase
         .from("savings_accounts")
-        .update({ balance: newBalance })
+        .update({
+          balance: newBalance
+        })
         .eq("id", account.id);
-      
-      if (updateError) {
+        
+      if (accountError) {
         toast({
-          title: "Failed to update account balance",
-          description: updateError.message,
+          title: "Error updating account balance",
+          description: accountError.message,
           variant: "destructive",
         });
         return;
@@ -156,7 +156,7 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
       
       toast({
         title: "Success",
-        description: `${type === "deposit" ? "Deposit" : "Withdrawal"} completed successfully`,
+        description: `₵${amount.toFixed(2)} ${type === "deposit" ? "deposited into" : "withdrawn from"} account successfully`,
       });
       
       onSave();
@@ -174,20 +174,22 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {type === "deposit" ? (
-              <div className="flex items-center">
-                <ArrowUpCircle className="mr-2 h-5 w-5 text-green-600" />
-                Deposit Funds
-              </div>
-            ) : (
-              <div className="flex items-center">
-                <ArrowDownCircle className="mr-2 h-5 w-5 text-red-600" />
-                Withdraw Funds
-              </div>
-            )}
+            <div className="flex items-center">
+              {type === "deposit" ? (
+                <>
+                  <ArrowUpCircle className="mr-2 h-5 w-5 text-green-600" />
+                  Deposit Funds
+                </>
+              ) : (
+                <>
+                  <ArrowDownCircle className="mr-2 h-5 w-5 text-red-600" />
+                  Withdraw Funds
+                </>
+              )}
+            </div>
           </DialogTitle>
         </DialogHeader>
         
@@ -195,7 +197,7 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
           <p className="font-medium">Account Information</p>
           <div className="grid grid-cols-2 gap-2 mt-2">
             <div>
-              <span className="text-gray-500">Account:</span>
+              <span className="text-gray-500">Account Number:</span>
             </div>
             <div>{account.account_number}</div>
             <div>
@@ -203,9 +205,9 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
             </div>
             <div>{account.profiles?.full_name || "Unknown"}</div>
             <div>
-              <span className="text-gray-500">Type:</span>
+              <span className="text-gray-500">Account Type:</span>
             </div>
-            <div>{account.account_type.replace("_", " ")}</div>
+            <div>{account.account_type}</div>
             <div>
               <span className="text-gray-500">Current Balance:</span>
             </div>
@@ -217,7 +219,7 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="amount">
-                Amount (₵) *
+                {type === "deposit" ? "Deposit" : "Withdrawal"} Amount (₵) *
               </Label>
               <Input
                 id="amount"
@@ -229,10 +231,13 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
                   },
                   validate: {
                     positive: (value) => parseFloat(value) > 0 || "Amount must be greater than 0",
-                    notExceedBalance: (value) => 
-                      type !== "withdrawal" || 
-                      parseFloat(value) <= account.balance || 
-                      "Insufficient funds"
+                    ...(type === "withdrawal" 
+                      ? {
+                          sufficient: (value) => 
+                            parseFloat(value) <= account.balance || 
+                            "Insufficient funds in account"
+                        } 
+                      : {})
                   }
                 })}
                 placeholder="Enter amount"
@@ -247,9 +252,7 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
               <Label htmlFor="payment_method">Payment Method *</Label>
               <Select 
                 defaultValue="cash"
-                onValueChange={(value) => register("payment_method").onChange({
-                  target: { name: "payment_method", value }
-                })}
+                onValueChange={(value: PaymentMethod) => setValue("payment_method", value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select payment method" />
@@ -291,15 +294,13 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
             <Button 
               type="submit" 
               disabled={loading}
-              className={type === "deposit" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
+              className={
+                type === "deposit"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }
             >
-              {loading ? (
-                <LoadingSpinner />
-              ) : type === "deposit" ? (
-                "Complete Deposit"
-              ) : (
-                "Complete Withdrawal"
-              )}
+              {loading ? <LoadingSpinner /> : type === "deposit" ? "Deposit" : "Withdraw"}
             </Button>
           </div>
         </form>

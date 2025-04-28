@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 interface LoanProfile {
@@ -25,7 +26,7 @@ interface Loan {
   interest_rate: number;
   term_months: number;
   purpose: string | null;
-  status: string;
+  status: LoanStatus;
   disbursed_at: string | null;
   next_payment_date: string | null;
   total_paid: number | null;
@@ -50,8 +51,8 @@ interface LoanTransaction {
   id: string;
   transaction_number: string;
   amount: number;
-  transaction_type: string;
-  payment_method: string;
+  transaction_type: TransactionType;
+  payment_method: PaymentMethod;
   reference_number: string | null;
   created_at: string;
   performed_by_profile: PerformedByProfile | null;
@@ -130,20 +131,22 @@ const LoanDetailsModal = ({ isOpen, onClose, loan }: LoanDetailsModalProps) => {
           variant: "destructive",
         });
       } else if (data) {
-        // Handle potential errors in the relationship
-        const safeTransactions = data.map(transaction => {
-          // Check if performed_by_profile is valid
-          let safePerformedBy: PerformedByProfile | null = null;
-          if (transaction.performed_by_profile && 
-              typeof transaction.performed_by_profile === 'object' && 
-              !('error' in transaction.performed_by_profile)) {
-            safePerformedBy = transaction.performed_by_profile as PerformedByProfile;
-          }
-          
+        // Handle potential errors in the relationship and transform into our expected type
+        const safeTransactions: LoanTransaction[] = data.map(transaction => {
           return {
-            ...transaction,
-            performed_by_profile: safePerformedBy
-          } as LoanTransaction;
+            id: transaction.id,
+            transaction_number: transaction.transaction_number,
+            amount: transaction.amount,
+            transaction_type: transaction.transaction_type as TransactionType,
+            payment_method: transaction.payment_method as PaymentMethod,
+            reference_number: transaction.reference_number,
+            created_at: transaction.created_at || new Date().toISOString(),
+            performed_by_profile: transaction.performed_by_profile && 
+              typeof transaction.performed_by_profile === 'object' && 
+              !('error' in transaction.performed_by_profile)
+              ? transaction.performed_by_profile as PerformedByProfile
+              : null
+          };
         });
         
         setTransactions(safeTransactions);
