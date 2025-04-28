@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
-type IdType = "ghana_card" | "voter_id" | "passport" | "";
+type IdType = "ghana_card" | "voter_id" | "passport" | "none";
 
 interface Customer {
   id: string;
@@ -48,7 +47,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
     phone_number: "",
     email: "",
     address: "",
-    id_type: "",
+    id_type: "none",
     id_number: "",
   };
 
@@ -62,7 +61,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
       setValue("phone_number", customer.phone_number);
       setValue("email", customer.email || "");
       setValue("address", customer.address || "");
-      setValue("id_type", (customer.id_type as IdType) || "");
+      setValue("id_type", (customer.id_type as IdType) || "none");
       setValue("id_number", customer.id_number || "");
     } else {
       reset(defaultValues);
@@ -79,7 +78,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
         role: "customer" as const,
         email: data.email || null,
         address: data.address || null,
-        id_type: data.id_type || null,
+        id_type: data.id_type === "none" ? null : data.id_type,
         id_number: data.id_number || null,
       };
 
@@ -205,14 +204,14 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
               <div className="space-y-2">
                 <Label htmlFor="id_type">ID Type</Label>
                 <Select 
-                  onValueChange={(value: "ghana_card" | "voter_id" | "passport" | "") => setValue("id_type", value)}
-                  value={customer?.id_type || ""}
+                  onValueChange={(value: IdType) => setValue("id_type", value)}
+                  value={(customer?.id_type as IdType) || "none"}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select ID type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     <SelectItem value="ghana_card">Ghana Card</SelectItem>
                     <SelectItem value="voter_id">Voter ID</SelectItem>
                     <SelectItem value="passport">Passport</SelectItem>

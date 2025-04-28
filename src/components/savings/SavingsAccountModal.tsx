@@ -232,7 +232,7 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
         </DialogHeader>
         
         <div className="space-y-4">
-          {mode === "create" && (
+          {mode === "create" && customers.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="customer">Customer</Label>
               <Select value={customerId} onValueChange={setCustomerId} disabled={mode === "edit"}>
