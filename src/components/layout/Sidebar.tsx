@@ -1,161 +1,209 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { 
-  Home, 
-  Users, 
-  PiggyBank, 
-  CreditCard, 
-  Receipt, 
-  BarChart4, 
-  Settings, 
-  ChevronDown, 
-  ChevronRight
-} from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface NavItemProps {
-  to: string;
-  icon: React.ReactNode;
-  label: string;
-  active: boolean;
-  children?: { to: string; label: string }[];
-}
-
-const NavItem = ({ to, icon, label, active, children }: NavItemProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const hasChildren = children && children.length > 0;
-
-  return (
-    <div>
-      {hasChildren ? (
-        <div className="mb-1">
-          <button 
-            onClick={() => setIsOpen(!isOpen)}
-            className={cn(
-              "flex items-center w-full px-3 py-2 text-sm rounded-md transition-colors",
-              active ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-100"
-            )}
-          >
-            <span className="mr-3">{icon}</span>
-            <span className="flex-1">{label}</span>
-            {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          </button>
-          
-          {isOpen && (
-            <div className="ml-6 mt-1">
-              {children.map((child, index) => (
-                <Link 
-                  key={index} 
-                  to={child.to}
-                  className="flex items-center px-3 py-2 text-sm rounded-md text-gray-700 hover:bg-gray-100 mb-1"
-                >
-                  <span className="h-1 w-1 rounded-full bg-gray-400 mr-2"></span>
-                  <span>{child.label}</span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <Link 
-          to={to}
-          className={cn(
-            "flex items-center px-3 py-2 text-sm rounded-md transition-colors mb-1",
-            active ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-100"
-          )}
-        >
-          <span className="mr-3">{icon}</span>
-          <span>{label}</span>
-        </Link>
-      )}
-    </div>
-  );
-};
+import {
+  Home,
+  Users,
+  PiggyBank,
+  CreditCard,
+  FileText,
+  Settings,
+  BarChart2,
+  Menu,
+  LogOut,
+  CloudUpload,
+  DatabaseBackup
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { useMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 const Sidebar = () => {
   const location = useLocation();
-  const isActive = (path: string) => location.pathname === path;
-  const isActiveParent = (paths: string[]) => paths.some(path => location.pathname.startsWith(path));
+  const navigate = useNavigate();
+  const isMobile = useMobile();
+  const [isOpen, setIsOpen] = useState(!isMobile);
+  const { toast } = useToast();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    setIsOpen(!isMobile);
+  }, [isMobile]);
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+            
+          if (error) {
+            console.error("Error fetching user role:", error);
+          } else if (data) {
+            setUserRole(data.role);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking user role:", error);
+      }
+    };
+    
+    checkUserRole();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Signed out successfully",
+        variant: "default",
+      });
+      navigate("/login");
+    } catch (error) {
+      toast({
+        title: "Failed to sign out",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const sidebarItems = [
+    {
+      name: "Dashboard",
+      icon: Home,
+      href: "/",
+      roles: ["admin", "teller", "loan_officer", "field_agent"],
+    },
+    {
+      name: "Customers",
+      icon: Users,
+      href: "/customers",
+      roles: ["admin", "teller", "loan_officer", "field_agent"],
+    },
+    {
+      name: "Savings",
+      icon: PiggyBank,
+      href: "/savings",
+      roles: ["admin", "teller"],
+    },
+    {
+      name: "Loans",
+      icon: CreditCard,
+      href: "/loans",
+      roles: ["admin", "loan_officer"],
+    },
+    {
+      name: "Transactions",
+      icon: FileText,
+      href: "/transactions",
+      roles: ["admin", "teller"],
+    },
+    {
+      name: "Reports",
+      icon: BarChart2,
+      href: "/reports",
+      roles: ["admin"],
+    },
+    {
+      name: "Settings",
+      icon: Settings,
+      href: "/settings",
+      roles: ["admin"],
+    },
+  ];
+
+  const navItems = sidebarItems.filter(
+    item => !userRole || item.roles.includes(userRole)
+  );
 
   return (
-    <div className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 h-screen">
-      <div className="p-4">
-        <h2 className="text-2xl font-bold text-blue-700">GMFL</h2>
-        <p className="text-xs text-gray-500">Ghana Microfinance Ledger</p>
-      </div>
-      
-      <div className="flex-1 px-3 py-4 overflow-y-auto">
-        <nav className="space-y-1">
-          <NavItem 
-            to="/"
-            icon={<Home size={18} />}
-            label="Dashboard"
-            active={isActive("/")}
-          />
-          <NavItem 
-            to="/customers"
-            icon={<Users size={18} />}
-            label="Customers"
-            active={isActiveParent(["/customers"])}
-            children={[
-              { to: "/customers", label: "All Customers" },
-              { to: "/customers/new", label: "New Customer" }
-            ]}
-          />
-          <NavItem 
-            to="/savings"
-            icon={<PiggyBank size={18} />}
-            label="Savings"
-            active={isActiveParent(["/savings"])}
-            children={[
-              { to: "/savings/accounts", label: "Accounts" },
-              { to: "/savings/new", label: "New Account" }
-            ]}
-          />
-          <NavItem 
-            to="/loans"
-            icon={<CreditCard size={18} />}
-            label="Loans"
-            active={isActiveParent(["/loans"])}
-            children={[
-              { to: "/loans/active", label: "Active Loans" },
-              { to: "/loans/new", label: "New Loan" },
-              { to: "/loans/repayments", label: "Repayments" }
-            ]}
-          />
-          <NavItem 
-            to="/transactions"
-            icon={<Receipt size={18} />}
-            label="Transactions"
-            active={isActiveParent(["/transactions"])}
-            children={[
-              { to: "/transactions/all", label: "All Transactions" },
-              { to: "/transactions/new", label: "New Transaction" }
-            ]}
-          />
-          <NavItem 
-            to="/reports"
-            icon={<BarChart4 size={18} />}
-            label="Reports"
-            active={isActiveParent(["/reports"])}
-          />
-          <NavItem 
-            to="/settings"
-            icon={<Settings size={18} />}
-            label="Settings"
-            active={isActiveParent(["/settings"])}
-          />
-        </nav>
-      </div>
-      
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex flex-col">
-          <p className="text-xs text-gray-500">Powered by</p>
-          <p className="text-sm font-medium">Lovable</p>
+    <>
+      {isMobile && (
+        <button
+          className="fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md text-gray-700"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <Menu size={20} />
+        </button>
+      )}
+
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transition-transform duration-200 transform",
+          isMobile && !isOpen ? "-translate-x-full" : "translate-x-0"
+        )}
+      >
+        <div className="flex flex-col h-full">
+          <div className="px-4 py-6 border-b border-gray-200">
+            <h1 className="text-xl font-bold text-blue-700">Dinpa Microfinance</h1>
+          </div>
+
+          <div className="flex-1 overflow-y-auto py-4 px-3">
+            <ul className="space-y-1">
+              {navItems.map((item) => (
+                <li key={item.name}>
+                  <Link
+                    to={item.href}
+                    className={cn(
+                      "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                      location.pathname === item.href
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-gray-700 hover:bg-gray-100"
+                    )}
+                    onClick={() => isMobile && setIsOpen(false)}
+                  >
+                    <item.icon className="h-5 w-5 mr-3" />
+                    {item.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="p-4 border-t border-gray-200 space-y-4">
+            <div className="flex flex-col space-y-1">
+              <Link
+                to="/settings/sync"
+                className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                onClick={() => isMobile && setIsOpen(false)}
+              >
+                <CloudUpload className="h-5 w-5 mr-3" />
+                Sync Data
+              </Link>
+              <Link
+                to="/settings/backup"
+                className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                onClick={() => isMobile && setIsOpen(false)}
+              >
+                <DatabaseBackup className="h-5 w-5 mr-3" />
+                Backup Data
+              </Link>
+            </div>
+
+            <button
+              onClick={handleSignOut}
+              className="flex w-full items-center px-3 py-2 rounded-md text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <LogOut className="h-5 w-5 mr-3" />
+              Sign Out
+            </button>
+          </div>
+
+          <div className="px-4 py-3 border-t border-gray-200 text-xs text-gray-500">
+            <div>Powered by Neolifeporium | Lovable</div>
+            <div>Made with ❤ by George Asiedu Annan</div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
