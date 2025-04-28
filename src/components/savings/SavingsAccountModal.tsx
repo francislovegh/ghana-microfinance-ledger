@@ -28,12 +28,14 @@ interface SavingsAccount {
   is_active: boolean;
 }
 
+type ModalMode = "create" | "edit";
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
   account: SavingsAccount | null;
-  mode: "create" | "edit";
+  mode: ModalMode;
 }
 
 const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) => {
