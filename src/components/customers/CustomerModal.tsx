@@ -11,13 +11,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
+type IdType = "ghana_card" | "voter_id" | "passport" | "";
+
 interface Customer {
   id: string;
   full_name: string;
   phone_number: string;
   email: string | null;
   address: string | null;
-  id_type: "ghana_card" | "voter_id" | "passport" | null;
+  id_type: IdType | null;
   id_number: string | null;
 }
 
@@ -33,7 +35,7 @@ interface FormValues {
   phone_number: string;
   email: string;
   address: string;
-  id_type: "ghana_card" | "voter_id" | "passport" | "";
+  id_type: IdType;
   id_number: string;
 }
 
@@ -41,7 +43,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   
-  const defaultValues = {
+  const defaultValues: FormValues = {
     full_name: "",
     phone_number: "",
     email: "",
@@ -60,7 +62,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
       setValue("phone_number", customer.phone_number);
       setValue("email", customer.email || "");
       setValue("address", customer.address || "");
-      setValue("id_type", customer.id_type || "");
+      setValue("id_type", (customer.id_type as IdType) || "");
       setValue("id_number", customer.id_number || "");
     } else {
       reset(defaultValues);

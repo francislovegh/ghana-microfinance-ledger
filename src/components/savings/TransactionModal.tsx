@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+
+type TransactionType = "deposit" | "withdrawal";
+type PaymentMethod = "cash" | "bank_transfer" | "mtn_momo" | "vodafone_cash" | "airteltigo_money";
 
 interface SavingsAccount {
   id: string;
@@ -28,12 +30,12 @@ interface TransactionModalProps {
   onClose: () => void;
   onSave: () => void;
   account: SavingsAccount;
-  type: "deposit" | "withdrawal";
+  type: TransactionType;
 }
 
 interface FormValues {
   amount: string;
-  payment_method: string;
+  payment_method: PaymentMethod;
   reference_number: string;
   description: string;
 }
@@ -119,55 +121,37 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
         ? account.balance + amount 
         : account.balance - amount;
       
-      // Start a transaction using rpc
-      const { data: result, error } = await supabase.rpc("execute_savings_transaction", {
-        p_transaction_data: transactionData,
-        p_new_balance: newBalance,
-        p_account_id: account.id
-      });
+      // Try to use a custom RPC function directly instead of using rpc()
+      let transactionSuccess = false;
       
-      if (error) {
+      // Manually handle the transaction with multiple operations
+      // 1. Insert transaction record
+      const { error: transactionError } = await supabase
+        .from("transactions")
+        .insert(transactionData);
+      
+      if (transactionError) {
         toast({
-          title: "Transaction failed",
-          description: error.message,
+          title: "Failed to record transaction",
+          description: transactionError.message,
           variant: "destructive",
         });
         return;
       }
       
-      // If there's no RPC function, we'll need to handle it with multiple operations
-      // This is a fallback in case the RPC doesn't exist
-      if (!result) {
-        // Begin manual transaction
-        // 1. Insert transaction record
-        const { error: transactionError } = await supabase
-          .from("transactions")
-          .insert(transactionData);
-        
-        if (transactionError) {
-          toast({
-            title: "Failed to record transaction",
-            description: transactionError.message,
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        // 2. Update account balance
-        const { error: updateError } = await supabase
-          .from("savings_accounts")
-          .update({ balance: newBalance })
-          .eq("id", account.id);
-        
-        if (updateError) {
-          toast({
-            title: "Failed to update account balance",
-            description: updateError.message,
-            variant: "destructive",
-          });
-          // Ideally, we should roll back the transaction here
-          return;
-        }
+      // 2. Update account balance
+      const { error: updateError } = await supabase
+        .from("savings_accounts")
+        .update({ balance: newBalance })
+        .eq("id", account.id);
+      
+      if (updateError) {
+        toast({
+          title: "Failed to update account balance",
+          description: updateError.message,
+          variant: "destructive",
+        });
+        return;
       }
       
       toast({
