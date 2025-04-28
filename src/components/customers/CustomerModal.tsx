@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 interface Customer {
   id: string;
@@ -17,7 +17,7 @@ interface Customer {
   phone_number: string;
   email: string | null;
   address: string | null;
-  id_type: string | null;
+  id_type: "ghana_card" | "voter_id" | "passport" | null;
   id_number: string | null;
 }
 
@@ -33,7 +33,7 @@ interface FormValues {
   phone_number: string;
   email: string;
   address: string;
-  id_type: string;
+  id_type: "ghana_card" | "voter_id" | "passport" | "";
   id_number: string;
 }
 
@@ -74,7 +74,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
       // Handle empty strings for optional fields
       const customerData = {
         ...data,
-        role: "customer",
+        role: "customer" as const,
         email: data.email || null,
         address: data.address || null,
         id_type: data.id_type || null,
@@ -203,7 +203,7 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
               <div className="space-y-2">
                 <Label htmlFor="id_type">ID Type</Label>
                 <Select 
-                  onValueChange={(value) => setValue("id_type", value)}
+                  onValueChange={(value: "ghana_card" | "voter_id" | "passport" | "") => setValue("id_type", value)}
                   value={customer?.id_type || ""}
                 >
                   <SelectTrigger>

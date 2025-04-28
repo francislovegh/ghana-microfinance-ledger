@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { ArrowUpCircle } from "lucide-react";
 
 interface LoanSchedule {
@@ -113,7 +112,6 @@ const LoanRepaymentModal = ({ isOpen, onClose, onSave, loan }: LoanRepaymentModa
       } else if (data) {
         setSchedules(data);
         
-        // Find the next unpaid schedule
         const nextUnpaidSchedule = data.find(schedule => !schedule.is_paid);
         if (nextUnpaidSchedule) {
           setNextPayment(nextUnpaidSchedule);
@@ -144,7 +142,6 @@ const LoanRepaymentModal = ({ isOpen, onClose, onSave, loan }: LoanRepaymentModa
       const amount = parseFloat(data.amount);
       const scheduleId = watch("schedule_id");
       
-      // Update the loan schedule (if applicable)
       let updatedSchedule = false;
       if (scheduleId) {
         const schedule = schedules.find(s => s.id === scheduleId);
@@ -175,14 +172,11 @@ const LoanRepaymentModal = ({ isOpen, onClose, onSave, loan }: LoanRepaymentModa
         }
       }
       
-      // Calculate new loan totals
       const newTotalPaid = (loan.total_paid || 0) + amount;
       const newRemainingBalance = loan.amount - newTotalPaid;
       
-      // Determine if the loan is now fully paid
       const isFullyPaid = newRemainingBalance <= 0;
       
-      // Update the loan record
       const { error: loanError } = await supabase
         .from("loans")
         .update({
@@ -204,7 +198,6 @@ const LoanRepaymentModal = ({ isOpen, onClose, onSave, loan }: LoanRepaymentModa
         return;
       }
       
-      // Create the transaction record
       const transactionData = {
         loan_id: loan.id,
         user_id: loan.user_id,

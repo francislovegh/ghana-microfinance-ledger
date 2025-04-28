@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -9,9 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useForm } from "react-hook-form";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
+
+type LoanStatus = "pending" | "approved" | "disbursed" | "active" | "fully_paid" | "defaulted";
+type IdType = "ghana_card" | "voter_id" | "passport";
 
 interface Customer {
   id: string;
@@ -27,7 +29,7 @@ interface Loan {
   interest_rate: number;
   term_months: number;
   purpose: string | null;
-  status: string;
+  status: LoanStatus;
 }
 
 interface LoanProduct {
@@ -69,7 +71,7 @@ interface GuarantorFormValues {
   phone_number: string;
   email: string;
   address: string;
-  id_type: string;
+  id_type: IdType;
   id_number: string;
   relationship: string;
   document_url?: FileList;
@@ -84,7 +86,6 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
   const [currentLoanId, setCurrentLoanId] = useState<string | null>(null);
   const { toast } = useToast();
   
-  // Basic details form
   const { register: registerBasic, handleSubmit: handleSubmitBasic, setValue: setBasicValue, watch: watchBasic, reset: resetBasic, formState: { errors: errorsBasic } } = useForm<BasicFormValues>({
     defaultValues: {
       user_id: "",
@@ -95,7 +96,6 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
     }
   });
   
-  // Collateral form
   const { register: registerCollateral, handleSubmit: handleSubmitCollateral, reset: resetCollateral, formState: { errors: errorsCollateral } } = useForm<CollateralFormValues>({
     defaultValues: {
       collateral_type: "real_estate",
@@ -104,7 +104,6 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
     }
   });
   
-  // Guarantor form
   const { register: registerGuarantor, handleSubmit: handleSubmitGuarantor, setValue: setGuarantorValue, reset: resetGuarantor, formState: { errors: errorsGuarantor } } = useForm<GuarantorFormValues>({
     defaultValues: {
       full_name: "",
@@ -183,8 +182,6 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
   
   const fetchLoanProducts = async () => {
     try {
-      // This would normally fetch from a loan_products table
-      // For now, we'll use hardcoded products
       setLoanProducts([
         {
           id: "1",
@@ -232,14 +229,13 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
         interest_rate: parseFloat(data.interest_rate),
         term_months: parseInt(data.term_months),
         purpose: data.purpose || null,
-        status: loan?.status || "pending"
+        status: loan?.status || "pending" as LoanStatus
       };
       
       let loanId = currentLoanId;
       let error;
       
       if (loanId) {
-        // Update existing loan
         const { error: updateError } = await supabase
           .from("loans")
           .update(loanData)
@@ -247,10 +243,12 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
           
         error = updateError;
       } else {
-        // Create new loan
         const { data: newLoan, error: insertError } = await supabase
           .from("loans")
-          .insert(loanData)
+          .insert({
+            ...loanData,
+            loan_number: await generateLoanNumber()
+          })
           .select()
           .single();
           
@@ -275,7 +273,6 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
             : "Loan application created successfully",
         });
         
-        // Move to next tab if it's a new application
         if (loanId !== currentLoanId) {
           setActiveTab("collateral");
         } else if (activeTab === "basic") {
@@ -294,6 +291,10 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
     }
   };
   
+  const generateLoanNumber = async (): Promise<string> => {
+    return "20" + Math.floor(Math.random() * 100000000).toString().padStart(8, '0');
+  };
+  
   const onSubmitCollateral = async (data: CollateralFormValues) => {
     if (!currentLoanId) {
       toast({
@@ -310,7 +311,6 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
       
       let documentUrl = null;
       
-      // Handle file upload if provided
       if (data.document_url && data.document_url.length > 0) {
         const file = data.document_url[0];
         const fileExt = file.name.split('.').pop();
@@ -358,14 +358,12 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
           description: "Collateral information saved",
         });
         
-        // Reset the collateral form
         resetCollateral({
           collateral_type: "real_estate",
           description: "",
           value: ""
         });
         
-        // Move to guarantor tab
         setActiveTab("guarantor");
       }
     } catch (error: any) {
@@ -396,7 +394,6 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
       
       let documentUrl = null;
       
-      // Handle file upload if provided
       if (data.document_url && data.document_url.length > 0) {
         const file = data.document_url[0];
         const fileExt = file.name.split('.').pop();
@@ -448,7 +445,6 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
           description: "Guarantor information saved",
         });
         
-        // Reset the guarantor form
         resetGuarantor({
           full_name: "",
           phone_number: "",
@@ -459,7 +455,6 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave, loan }: LoanApplication
           relationship: ""
         });
         
-        // Finish the application process
         onSave();
       }
     } catch (error: any) {

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { format } from "date-fns";
 
 interface LoanSchedule {
@@ -142,7 +142,14 @@ const LoanDetailsModal = ({ isOpen, onClose, loan }: LoanDetailsModalProps) => {
         .order("created_at", { ascending: false });
         
       if (transactionsData) {
-        setTransactions(transactionsData);
+        // Transform the data to handle potentially missing profiles
+        const processedTransactions = transactionsData.map(transaction => {
+          return {
+            ...transaction,
+            performed_by_profile: transaction.performed_by_profile || null
+          };
+        });
+        setTransactions(processedTransactions);
       }
     } catch (error) {
       console.error("Error fetching loan details:", error);
