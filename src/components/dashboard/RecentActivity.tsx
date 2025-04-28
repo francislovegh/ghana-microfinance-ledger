@@ -6,6 +6,10 @@ import { formatDistanceToNow } from "date-fns";
 import { CreditCard, PiggyBank } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface TransactionProfile {
+  full_name: string;
+}
+
 interface Transaction {
   id: string;
   transaction_number: string;
@@ -13,9 +17,7 @@ interface Transaction {
   transaction_type: string;
   created_at: string;
   user_id: string;
-  profiles: {
-    full_name: string;
-  };
+  profiles?: TransactionProfile | null;
 }
 
 const RecentActivity = () => {
@@ -33,8 +35,20 @@ const RecentActivity = () => {
 
         if (error) {
           console.error("Error fetching transactions:", error);
-        } else {
-          setTransactions(data || []);
+        } else if (data) {
+          // Transform the data to ensure it matches our Transaction type
+          const typedTransactions = data.map(transaction => {
+            // Handle potentially invalid profile data
+            const transformedTransaction: Transaction = {
+              ...transaction,
+              profiles: typeof transaction.profiles === 'object' && transaction.profiles !== null 
+                ? transaction.profiles as TransactionProfile 
+                : { full_name: "Unknown Customer" }
+            };
+            return transformedTransaction;
+          });
+          
+          setTransactions(typedTransactions);
         }
       } catch (error) {
         console.error("Unexpected error:", error);
