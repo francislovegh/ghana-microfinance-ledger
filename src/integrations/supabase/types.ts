@@ -9,16 +9,494 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          entity: string
+          entity_id: string | null
+          id: string
+          ip_address: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          entity: string
+          entity_id?: string | null
+          id?: string
+          ip_address?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          ip_address?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kyc_documents: {
+        Row: {
+          created_at: string | null
+          document_type: string
+          document_url: string
+          id: string
+          updated_at: string | null
+          user_id: string
+          verified: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_type: string
+          document_url: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+          verified?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: string
+          document_url?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+          verified?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kyc_documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_collaterals: {
+        Row: {
+          collateral_type: string
+          created_at: string | null
+          description: string
+          document_url: string | null
+          id: string
+          loan_id: string
+          value: number
+        }
+        Insert: {
+          collateral_type: string
+          created_at?: string | null
+          description: string
+          document_url?: string | null
+          id?: string
+          loan_id: string
+          value: number
+        }
+        Update: {
+          collateral_type?: string
+          created_at?: string | null
+          description?: string
+          document_url?: string | null
+          id?: string
+          loan_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_collaterals_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_guarantors: {
+        Row: {
+          address: string
+          created_at: string | null
+          document_url: string | null
+          email: string | null
+          full_name: string
+          id: string
+          id_number: string
+          id_type: Database["public"]["Enums"]["id_type"]
+          loan_id: string
+          phone_number: string
+          relationship: string
+        }
+        Insert: {
+          address: string
+          created_at?: string | null
+          document_url?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          id_number: string
+          id_type: Database["public"]["Enums"]["id_type"]
+          loan_id: string
+          phone_number: string
+          relationship: string
+        }
+        Update: {
+          address?: string
+          created_at?: string | null
+          document_url?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          id_number?: string
+          id_type?: Database["public"]["Enums"]["id_type"]
+          loan_id?: string
+          phone_number?: string
+          relationship?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_guarantors_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_schedules: {
+        Row: {
+          created_at: string | null
+          due_date: string
+          id: string
+          interest_amount: number
+          is_paid: boolean | null
+          loan_id: string
+          paid_amount: number | null
+          payment_date: string | null
+          payment_number: number
+          penalty_amount: number | null
+          principal_amount: number
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string | null
+          due_date: string
+          id?: string
+          interest_amount: number
+          is_paid?: boolean | null
+          loan_id: string
+          paid_amount?: number | null
+          payment_date?: string | null
+          payment_number: number
+          penalty_amount?: number | null
+          principal_amount: number
+          total_amount: number
+        }
+        Update: {
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          interest_amount?: number
+          is_paid?: boolean | null
+          loan_id?: string
+          paid_amount?: number | null
+          payment_date?: string | null
+          payment_number?: number
+          penalty_amount?: number | null
+          principal_amount?: number
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_schedules_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          amount: number
+          created_at: string | null
+          disbursed_at: string | null
+          id: string
+          interest_rate: number
+          loan_number: string
+          next_payment_date: string | null
+          purpose: string | null
+          remaining_balance: number | null
+          status: Database["public"]["Enums"]["loan_status"]
+          term_months: number
+          total_paid: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          disbursed_at?: string | null
+          id?: string
+          interest_rate: number
+          loan_number: string
+          next_payment_date?: string | null
+          purpose?: string | null
+          remaining_balance?: number | null
+          status?: Database["public"]["Enums"]["loan_status"]
+          term_months: number
+          total_paid?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          disbursed_at?: string | null
+          id?: string
+          interest_rate?: number
+          loan_number?: string
+          next_payment_date?: string | null
+          purpose?: string | null
+          remaining_balance?: number | null
+          status?: Database["public"]["Enums"]["loan_status"]
+          term_months?: number
+          total_paid?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          email: string | null
+          full_name: string
+          id: string
+          id_number: string | null
+          id_type: Database["public"]["Enums"]["id_type"] | null
+          is_verified: boolean | null
+          phone_number: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          full_name: string
+          id: string
+          id_number?: string | null
+          id_type?: Database["public"]["Enums"]["id_type"] | null
+          is_verified?: boolean | null
+          phone_number: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          id_number?: string | null
+          id_type?: Database["public"]["Enums"]["id_type"] | null
+          is_verified?: boolean | null
+          phone_number?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      savings_accounts: {
+        Row: {
+          account_number: string
+          account_type: Database["public"]["Enums"]["savings_type"]
+          balance: number
+          created_at: string | null
+          id: string
+          interest_rate: number
+          is_active: boolean | null
+          maturity_date: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_number: string
+          account_type: Database["public"]["Enums"]["savings_type"]
+          balance?: number
+          created_at?: string | null
+          id?: string
+          interest_rate: number
+          is_active?: boolean | null
+          maturity_date?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_number?: string
+          account_type?: Database["public"]["Enums"]["savings_type"]
+          balance?: number
+          created_at?: string | null
+          id?: string
+          interest_rate?: number
+          is_active?: boolean | null
+          maturity_date?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "savings_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          loan_id: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          performed_by: string
+          reference_number: string | null
+          status: string | null
+          transaction_number: string
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          loan_id?: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          performed_by: string
+          reference_number?: string | null
+          status?: string | null
+          transaction_number: string
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          loan_id?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          performed_by?: string
+          reference_number?: string | null
+          status?: string | null
+          transaction_number?: string
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "savings_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_performed_by_fkey"
+            columns: ["performed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_account_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_loan_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_transaction_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
-      [_ in never]: never
+      id_type: "ghana_card" | "voter_id" | "passport"
+      loan_status:
+        | "pending"
+        | "approved"
+        | "disbursed"
+        | "active"
+        | "fully_paid"
+        | "defaulted"
+      payment_method:
+        | "cash"
+        | "bank_transfer"
+        | "mtn_momo"
+        | "vodafone_cash"
+        | "airteltigo_money"
+      savings_type: "regular" | "fixed_deposit" | "susu"
+      transaction_type:
+        | "deposit"
+        | "withdrawal"
+        | "loan_disbursement"
+        | "loan_repayment"
+        | "interest_payment"
+        | "penalty_payment"
+      user_role:
+        | "admin"
+        | "teller"
+        | "loan_officer"
+        | "field_agent"
+        | "customer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +611,33 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      id_type: ["ghana_card", "voter_id", "passport"],
+      loan_status: [
+        "pending",
+        "approved",
+        "disbursed",
+        "active",
+        "fully_paid",
+        "defaulted",
+      ],
+      payment_method: [
+        "cash",
+        "bank_transfer",
+        "mtn_momo",
+        "vodafone_cash",
+        "airteltigo_money",
+      ],
+      savings_type: ["regular", "fixed_deposit", "susu"],
+      transaction_type: [
+        "deposit",
+        "withdrawal",
+        "loan_disbursement",
+        "loan_repayment",
+        "interest_payment",
+        "penalty_payment",
+      ],
+      user_role: ["admin", "teller", "loan_officer", "field_agent", "customer"],
+    },
   },
 } as const
