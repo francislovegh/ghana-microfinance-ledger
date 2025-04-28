@@ -29,7 +29,7 @@ export interface LoanTransaction {
   description: string;
   created_at: string;
   performed_by: string;
-  performed_by_profile: LoanProfile;
+  performed_by_profile: LoanProfile | null;
 }
 
 export interface Transaction {
@@ -46,4 +46,22 @@ export interface Transaction {
   created_at: string;
   performed_by: string;
   profiles: TransactionProfile;
+}
+
+export interface LoanGuarantor {
+  loan_id: string;
+  full_name: string;
+  phone_number: string;
+  relationship: string;
+  id_type: IdType;
+  id_number: string;
+  address: string;
+  email?: string;
+}
+
+export interface DeleteConfirmationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => Promise<void>;
+  customerName: string;
 }

@@ -42,7 +42,6 @@ const RoleManagement = () => {
   
   // Update the toggleUserStatus function to return a Promise
   const toggleUserStatus = async (userId: string): Promise<void> => {
-    // Implement the function body, ensuring it returns a Promise
     try {
       const { data: user, error: fetchError } = await supabase
         .from("profiles")

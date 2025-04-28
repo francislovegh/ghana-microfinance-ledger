@@ -1,170 +1,125 @@
 
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useForm } from "react-hook-form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import { PaymentMethod, TransactionType } from "@/types/app";
+
+interface SavingsProfile {
+  full_name: string;
+  phone_number: string;
+}
 
 interface SavingsAccount {
   id: string;
-  account_number: string;
   user_id: string;
-  account_type: AccountType;
+  account_number: string;
   balance: number;
+  account_type: string;
   interest_rate: number;
-  maturity_date: string | null;
-  is_active: boolean;
-  profiles: {
-    full_name: string;
-  } | null;
+  profiles: SavingsProfile;
 }
 
-interface TransactionModalProps {
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  account: SavingsAccount;
+  account: SavingsAccount | null;
   type: "deposit" | "withdrawal";
 }
 
-interface FormValues {
-  amount: string;
-  payment_method: PaymentMethod;
-  reference_number: string;
-  description: string;
-}
-
-const TransactionModal = ({ isOpen, onClose, onSave, account, type }: TransactionModalProps) => {
+const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Props) => {
+  const [amount, setAmount] = useState<number>(0);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [reference, setReference] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [userDetails, setUserDetails] = useState<{ id: string } | null>(null);
   const { toast } = useToast();
   
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormValues>({
-    defaultValues: {
-      amount: "",
-      payment_method: "cash",
-      reference_number: "",
-      description: ""
-    }
-  });
-  
-  useEffect(() => {
-    if (isOpen) {
-      reset({
-        amount: "",
-        payment_method: "cash",
-        reference_number: "",
-        description: ""
-      });
-      
-      fetchCurrentUser();
-    }
-  }, [isOpen, reset]);
-  
-  const fetchCurrentUser = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        setUserDetails({ id: user.id });
-      }
-    } catch (error) {
-      console.error("Error fetching current user:", error);
-    }
+  const resetForm = () => {
+    setAmount(0);
+    setPaymentMethod("cash");
+    setReference("");
+    setDescription("");
   };
   
-  const onSubmit = async (data: FormValues) => {
+  const handleSubmit = async () => {
+    if (!account) return;
+    
+    if (amount <= 0) {
+      toast({
+        title: "Error",
+        description: `${type === "deposit" ? "Deposit" : "Withdrawal"} amount must be greater than zero`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (type === "withdrawal" && amount > account.balance) {
+      toast({
+        title: "Error",
+        description: "Withdrawal amount exceeds available balance",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setLoading(true);
+    
     try {
-      setLoading(true);
-      
-      if (!userDetails) {
-        toast({
-          title: "Error",
-          description: "User authentication required",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const amount = parseFloat(data.amount);
-      
-      // For withdrawals, check if account has sufficient funds
-      if (type === "withdrawal" && amount > account.balance) {
-        toast({
-          title: "Insufficient funds",
-          description: `The account balance is ₵${account.balance.toFixed(2)}, which is less than the withdrawal amount.`,
-          variant: "destructive",
-        });
-        return;
-      }
-      
       // Generate transaction number
-      const { data: txnNumberData } = await supabase.rpc('generate_transaction_number');
-      const transaction_number = txnNumberData || `TX-${Date.now()}`;
+      const { data: transactionNumber, error: numberError } = await supabase
+        .rpc('generate_transaction_number');
       
-      // Create transaction record
+      if (numberError) throw numberError;
+      
+      // Process the transaction
+      const newBalance = type === "deposit" 
+        ? account.balance + amount 
+        : account.balance - amount;
+        
+      // Record the transaction
       const { error: transactionError } = await supabase
-        .from("transactions")
+        .from('transactions')
         .insert({
           account_id: account.id,
           user_id: account.user_id,
           amount: amount,
           transaction_type: type as TransactionType,
-          payment_method: data.payment_method as PaymentMethod,
-          reference_number: data.reference_number || null,
-          description: data.description || null,
-          performed_by: userDetails.id,
-          transaction_number: transaction_number
+          payment_method: paymentMethod,
+          transaction_number: transactionNumber,
+          reference_number: reference || null,
+          description: description || `${type === "deposit" ? "Deposit to" : "Withdrawal from"} account ${account.account_number}`,
+          performed_by: (await supabase.auth.getUser()).data.user?.id || ""
         });
-        
-      if (transactionError) {
-        toast({
-          title: "Error creating transaction record",
-          description: transactionError.message,
-          variant: "destructive",
-        });
-        return;
-      }
+      
+      if (transactionError) throw transactionError;
       
       // Update account balance
-      const newBalance = type === "deposit" 
-        ? account.balance + amount 
-        : account.balance - amount;
-        
-      const { error: accountError } = await supabase
-        .from("savings_accounts")
-        .update({
-          balance: newBalance
-        })
-        .eq("id", account.id);
-        
-      if (accountError) {
-        toast({
-          title: "Error updating account balance",
-          description: accountError.message,
-          variant: "destructive",
-        });
-        return;
-      }
+      const { error: balanceError } = await supabase
+        .from('savings_accounts')
+        .update({ balance: newBalance })
+        .eq('id', account.id);
+      
+      if (balanceError) throw balanceError;
       
       toast({
         title: "Success",
-        description: `₵${amount.toFixed(2)} ${type === "deposit" ? "deposited into" : "withdrawn from"} account successfully`,
+        description: `${type === "deposit" ? "Deposit" : "Withdrawal"} processed successfully`,
       });
       
+      resetForm();
       onSave();
-    } catch (error: any) {
-      console.error("Unexpected error:", error);
+    } catch (error) {
+      console.error(`Error processing ${type}:`, error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: `Failed to process ${type}`,
         variant: "destructive",
       });
     } finally {
@@ -172,87 +127,62 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
     }
   };
   
+  if (!account) return null;
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            <div className="flex items-center">
-              {type === "deposit" ? (
-                <>
-                  <ArrowUpCircle className="mr-2 h-5 w-5 text-green-600" />
-                  Deposit Funds
-                </>
-              ) : (
-                <>
-                  <ArrowDownCircle className="mr-2 h-5 w-5 text-red-600" />
-                  Withdraw Funds
-                </>
-              )}
-            </div>
+            {type === "deposit" ? "Make Deposit" : "Make Withdrawal"}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="p-3 bg-gray-50 rounded-md text-sm mb-4">
-          <p className="font-medium">Account Information</p>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            <div>
-              <span className="text-gray-500">Account Number:</span>
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-4 rounded-md">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Customer</p>
+                <p className="font-medium">{account.profiles?.full_name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Account Number</p>
+                <p className="font-medium">{account.account_number}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Account Type</p>
+                <p className="font-medium">{account.account_type.replace("_", " ")}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Current Balance</p>
+                <p className="font-medium">₵{account.balance.toFixed(2)}</p>
+              </div>
             </div>
-            <div>{account.account_number}</div>
-            <div>
-              <span className="text-gray-500">Customer:</span>
-            </div>
-            <div>{account.profiles?.full_name || "Unknown"}</div>
-            <div>
-              <span className="text-gray-500">Account Type:</span>
-            </div>
-            <div>{account.account_type}</div>
-            <div>
-              <span className="text-gray-500">Current Balance:</span>
-            </div>
-            <div>₵ {account.balance.toFixed(2)}</div>
           </div>
-        </div>
-        
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="amount">
-                {type === "deposit" ? "Deposit" : "Withdrawal"} Amount (₵) *
+                {type === "deposit" ? "Deposit" : "Withdrawal"} Amount
               </Label>
-              <Input
-                id="amount"
-                {...register("amount", { 
-                  required: "Amount is required", 
-                  pattern: { 
-                    value: /^\d*\.?\d*$/, 
-                    message: "Must be a valid number" 
-                  },
-                  validate: {
-                    positive: (value) => parseFloat(value) > 0 || "Amount must be greater than 0",
-                    ...(type === "withdrawal" 
-                      ? {
-                          sufficient: (value) => 
-                            parseFloat(value) <= account.balance || 
-                            "Insufficient funds in account"
-                        } 
-                      : {})
-                  }
-                })}
-                placeholder="Enter amount"
-                className={errors.amount ? "border-red-500" : ""}
-              />
-              {errors.amount && (
-                <p className="text-red-500 text-xs">{errors.amount.message}</p>
-              )}
+              <div className="relative">
+                <span className="absolute left-3 top-2">₵</span>
+                <Input
+                  id="amount"
+                  type="number"
+                  placeholder="0.00"
+                  className="pl-6"
+                  value={amount || ""}
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                />
+              </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="payment_method">Payment Method *</Label>
+              <Label htmlFor="paymentMethod">Payment Method</Label>
               <Select 
-                defaultValue="cash"
-                onValueChange={(value: PaymentMethod) => setValue("payment_method", value)}
+                value={paymentMethod} 
+                onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select payment method" />
@@ -268,42 +198,33 @@ const TransactionModal = ({ isOpen, onClose, onSave, account, type }: Transactio
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="reference_number">Reference Number</Label>
+              <Label htmlFor="reference">Reference Number (Optional)</Label>
               <Input
-                id="reference_number"
-                {...register("reference_number")}
-                placeholder="Optional reference number"
+                id="reference"
+                placeholder="e.g. Receipt number, transaction ID"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Description (Optional)</Label>
               <Textarea
                 id="description"
-                {...register("description")}
-                placeholder="Optional transaction description"
-                rows={3}
+                placeholder="Add any additional notes"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
           </div>
-          
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading}
-              className={
-                type === "deposit"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
-              }
-            >
-              {loading ? <LoadingSpinner /> : type === "deposit" ? "Deposit" : "Withdraw"}
-            </Button>
-          </div>
-        </form>
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={loading}>
+            {loading ? "Processing..." : type === "deposit" ? "Make Deposit" : "Make Withdrawal"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

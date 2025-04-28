@@ -1,25 +1,30 @@
 
-import { useState, useEffect } from "react";
-import AppLayout from "@/components/layout/AppLayout";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
+import { Search, UserPlus, Edit, Trash2, Phone, MailIcon, UserCheck } from "lucide-react";
+import AppLayout from "@/components/layout/AppLayout";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import CustomerModal from "@/components/customers/CustomerModal";
 import DeleteConfirmationModal from "@/components/customers/DeleteConfirmationModal";
 import AuthGuard from "@/components/auth/AuthGuard";
 import { IdType } from "@/types/app";
 
-// Update Customer type to use IdType
 interface Customer {
   id: string;
   full_name: string;
   phone_number: string;
   email: string | null;
   address: string | null;
+  is_verified: boolean;
   id_type: IdType | null;
   id_number: string | null;
+  date_of_birth: string | null;
+  role: string;
 }
 
 const CustomersPage = () => {
@@ -29,23 +34,20 @@ const CustomersPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const { toast } = useToast();
 
-  // Fetch customers on component mount
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .eq("role", "customer")
-        .order("full_name", { ascending: true });
+        .order("full_name");
 
       if (error) throw error;
+
       setCustomers(data as Customer[]);
     } catch (error) {
       console.error("Error fetching customers:", error);
@@ -57,86 +59,56 @@ const CustomersPage = () => {
     } finally {
       setLoading(false);
     }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
+  const handleOpenCreateModal = () => {
+    setSelectedCustomer(null);
+    setIsModalOpen(true);
   };
 
-  const handleOpenModal = (customer: Customer | null = null) => {
-    // Later in the component where the type error occurs, cast the id_type to IdType
-    if (customer) {
-      setSelectedCustomer({
-        ...customer,
-        id_type: customer.id_type as IdType
-      });
-    } else {
-      setSelectedCustomer(null);
-    }
+  const handleOpenEditModal = (customer: Customer) => {
+    setSelectedCustomer({
+      ...customer,
+      id_type: customer.id_type as IdType // Cast to IdType
+    });
     setIsModalOpen(true);
   };
 
   const handleOpenDeleteModal = (customer: Customer) => {
-    setSelectedCustomer(customer);
+    setCustomerToDelete(customer);
     setIsDeleteModalOpen(true);
   };
 
-  const handleCreateOrUpdateCustomer = async (customerData: any) => {
+  const handleModalClose = () => {
     setIsModalOpen(false);
-    
-    try {
-      if (selectedCustomer) {
-        // Update existing customer
-        const { error } = await supabase
-          .from("profiles")
-          .update(customerData)
-          .eq("id", selectedCustomer.id);
-        
-        if (error) throw error;
-        
-        toast({
-          title: "Success",
-          description: "Customer updated successfully",
-        });
-      } else {
-        // Create new customer
-        const { error } = await supabase
-          .from("profiles")
-          .insert({ ...customerData, role: "customer" });
-        
-        if (error) throw error;
-        
-        toast({
-          title: "Success",
-          description: "Customer created successfully",
-        });
-      }
-      
-      fetchCustomers();
-    } catch (error) {
-      console.error("Error saving customer:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save customer",
-        variant: "destructive",
-      });
-    }
+    setSelectedCustomer(null);
   };
 
-  const handleDeleteCustomer = async () => {
-    if (!selectedCustomer) return;
-    
+  const handleDeleteModalClose = () => {
     setIsDeleteModalOpen(false);
-    
+    setCustomerToDelete(null);
+  };
+
+  const handleDeleteCustomer = async (): Promise<void> => {
+    if (!customerToDelete) return;
+
     try {
       const { error } = await supabase
         .from("profiles")
         .delete()
-        .eq("id", selectedCustomer.id);
-      
+        .eq("id", customerToDelete.id);
+
       if (error) throw error;
-      
+
       toast({
         title: "Success",
         description: "Customer deleted successfully",
       });
-      
+
       fetchCustomers();
     } catch (error) {
       console.error("Error deleting customer:", error);
@@ -145,128 +117,187 @@ const CustomersPage = () => {
         description: "Failed to delete customer",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleteModalOpen(false);
+      setCustomerToDelete(null);
     }
   };
 
-  // Filter customers based on search query
-  const filteredCustomers = customers.filter(customer => 
-    customer.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.phone_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  const handleCustomerSaved = () => {
+    setIsModalOpen(false);
+    fetchCustomers();
+    toast({
+      title: "Success",
+      description: selectedCustomer ? "Customer updated successfully" : "Customer created successfully",
+    });
+  };
+
+  const filteredCustomers = customers.filter((customer) => 
+    customer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.phone_number.includes(searchQuery) ||
+    (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (customer.id_number && customer.id_number.includes(searchQuery))
   );
 
   return (
     <AppLayout>
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Customers</h1>
-          <p className="text-gray-600">Manage customer accounts and information</p>
+          <p className="text-gray-600">Manage your customer database</p>
         </div>
         <Button 
-          onClick={() => handleOpenModal()} 
-          className="flex items-center gap-2"
+          onClick={handleOpenCreateModal}
+          className="flex items-center gap-2 w-full md:w-auto"
         >
-          <Plus size={18} /> Add Customer
+          <UserPlus size={18} />
+          Add New Customer
         </Button>
       </div>
-      
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b">
-          <div className="flex items-center">
-            <Search className="text-gray-400 mr-2" size={20} />
+
+      <Card className="mb-6">
+        <div className="p-4">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input
-              placeholder="Search customers..."
+              placeholder="Search by name, phone, email or ID number..."
+              className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
             />
           </div>
         </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-gray-700 bg-gray-50">
-              <tr>
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Address</th>
-                <th className="px-4 py-3">ID Type</th>
-                <th className="px-4 py-3">ID Number</th>
-                <th className="px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-3 text-center">Loading customers...</td>
+      </Card>
+
+      <Card>
+        <div className="p-2">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b">
+                <tr className="text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left">Name</th>
+                  <th className="px-4 py-3 text-left">Contact</th>
+                  <th className="px-4 py-3 text-left">Identification</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
-              ) : filteredCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-3 text-center">No customers found</td>
-                </tr>
-              ) : (
-                filteredCustomers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium">{customer.full_name}</td>
-                    <td className="px-4 py-3">{customer.phone_number}</td>
-                    <td className="px-4 py-3">{customer.email || "N/A"}</td>
-                    <td className="px-4 py-3">{customer.address || "N/A"}</td>
-                    <td className="px-4 py-3">{customer.id_type || "N/A"}</td>
-                    <td className="px-4 py-3">{customer.id_number || "N/A"}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={() => handleOpenModal(customer)}
-                        >
-                          <Edit size={16} className="text-blue-600" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleOpenDeleteModal(customer)}
-                        >
-                          <Trash size={16} className="text-red-600" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
-                      </div>
+              </thead>
+              <tbody className="divide-y">
+                {loading ? (
+                  Array(5).fill(null).map((_, i) => (
+                    <tr key={`skeleton-${i}`} className="bg-white">
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-32" /></td>
+                      <td className="px-4 py-3">
+                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-4 w-24 mt-1" />
+                      </td>
+                      <td className="px-4 py-3">
+                        <Skeleton className="h-5 w-16" />
+                        <Skeleton className="h-4 w-32 mt-1" />
+                      </td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-20" /></td>
+                      <td className="px-4 py-3 text-right"><Skeleton className="h-8 w-20 ml-auto" /></td>
+                    </tr>
+                  ))
+                ) : filteredCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                      {searchQuery ? "No customers matching your search" : "No customers found"}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredCustomers.map((customer) => (
+                    <tr key={customer.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{customer.full_name}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <Phone size={14} className="text-gray-400" />
+                          <span>{customer.phone_number}</span>
+                        </div>
+                        {customer.email && (
+                          <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                            <MailIcon size={12} />
+                            <span>{customer.email}</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {customer.id_type ? (
+                          <>
+                            <div className="text-sm font-medium">
+                              {customer.id_type.replace("_", " ").toUpperCase()}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {customer.id_number || "N/A"}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">No ID on file</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {customer.is_verified ? (
+                          <Badge className="flex items-center gap-1 bg-green-100 text-green-800 hover:bg-green-200">
+                            <UserCheck size={12} />
+                            Verified
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                            Unverified
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEditModal(customer)}
+                          >
+                            <Edit size={16} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenDeleteModal(customer)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-      
-      {/* Customer Modal */}
+      </Card>
+
       <CustomerModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleCreateOrUpdateCustomer}
+        onClose={handleModalClose}
+        onSave={handleCustomerSaved}
         customer={selectedCustomer}
       />
-      
-      {/* Delete Confirmation Modal */}
+
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        onClose={handleDeleteModalClose}
         onConfirm={handleDeleteCustomer}
-        customerName={selectedCustomer?.full_name || ""}
+        customerName={customerToDelete?.full_name || ""}
       />
     </AppLayout>
   );
 };
 
-const Customers = () => {
-  return (
-    <AuthGuard>
-      <CustomersPage />
-    </AuthGuard>
-  );
-};
+const Customers = () => (
+  <AuthGuard>
+    <CustomersPage />
+  </AuthGuard>
+);
 
 export default Customers;

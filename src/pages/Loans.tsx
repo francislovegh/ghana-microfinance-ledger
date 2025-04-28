@@ -122,9 +122,9 @@ const LoansPage = () => {
   const getStatusBadgeVariant = (status: LoanStatus) => {
     switch(status) {
       case "pending": return "secondary";
-      case "approved": return "warning";
-      case "disbursed": return "warning";
-      case "active": return "default";  // Changed from "success" to "default"
+      case "approved": return "outline"; // Changed from warning to outline
+      case "disbursed": return "outline"; // Changed from warning to outline
+      case "active": return "default";
       case "fully_paid": return "outline";
       case "defaulted": return "destructive";
       default: return "default";

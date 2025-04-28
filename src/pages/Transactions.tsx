@@ -16,26 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DateRange, DateRangePicker } from "@/components/ui/date-range-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-interface TransactionProfile {
-  full_name: string;
-}
-
-interface Transaction {
-  id: string;
-  transaction_number: string;
-  amount: number;
-  transaction_type: string;
-  payment_method: string;
-  reference_number: string | null;
-  description: string | null;
-  created_at: string;
-  user_id: string;
-  account_id: string | null;
-  loan_id: string | null;
-  profiles: TransactionProfile | null;
-  performed_by_profile: TransactionProfile | null;
-}
+import { Transaction, TransactionProfile, PaymentMethod, TransactionType } from "@/types/app";
 
 interface TransactionDetailsProps {
   transaction: Transaction | null;
@@ -102,7 +83,7 @@ const TransactionDetails = ({ transaction, onClose }: TransactionDetailsProps) =
             </div>
             <div>
               <p className="text-sm text-gray-500">Processed By</p>
-              <p className="font-medium">{transaction.performed_by_profile?.full_name || "Unknown"}</p>
+              <p className="font-medium">{transaction.performed_by || "Unknown"}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Payment Method</p>
@@ -162,9 +143,6 @@ const TransactionsPage = () => {
           *,
           profiles:user_id (
             full_name
-          ),
-          performed_by_profile:performed_by (
-            full_name
           )
         `)
         .order("created_at", { ascending: false });
@@ -177,7 +155,12 @@ const TransactionsPage = () => {
           variant: "destructive",
         });
       } else {
-        setTransactions(data || []);
+        setTransactions(data ? data.map(item => ({
+          ...item,
+          profiles: item.profiles || { full_name: "Unknown" },
+          transaction_type: item.transaction_type as TransactionType,
+          payment_method: item.payment_method as PaymentMethod
+        })) as Transaction[] : []);
       }
     } catch (error) {
       console.error("Unexpected error:", error);

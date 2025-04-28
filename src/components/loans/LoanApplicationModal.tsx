@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { IdType } from "@/types/app";
+import { IdType, LoanGuarantor } from "@/types/app";
 import { nanoid } from "nanoid";
 
 interface LoanApplicationModalProps {
@@ -24,15 +24,6 @@ interface Profile {
   phone_number: string;
 }
 
-interface Guarantor {
-  id: string;
-  full_name: string;
-  phone_number: string;
-  relationship: string;
-  id_type: IdType;
-  id_number: string;
-}
-
 const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalProps) => {
   const [amount, setAmount] = useState<number>(0);
   const [interestRate, setInterestRate] = useState<number>(15);
@@ -41,8 +32,8 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
   const [customerId, setCustomerId] = useState<string>("");
   const [customers, setCustomers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [guarantors, setGuarantors] = useState<Guarantor[]>([
-    { id: nanoid(), full_name: "", phone_number: "", relationship: "", id_type: "ghana_card", id_number: "" }
+  const [guarantors, setGuarantors] = useState<LoanGuarantor[]>([
+    { id: nanoid(), full_name: "", phone_number: "", relationship: "", id_type: "ghana_card", id_number: "", address: "" }
   ]);
   const { toast } = useToast();
 
@@ -85,7 +76,8 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
       phone_number: "",
       relationship: "",
       id_type: "ghana_card",
-      id_number: ""
+      id_number: "",
+      address: ""
     }]);
   };
 
@@ -95,7 +87,7 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
     }
   };
 
-  const updateGuarantor = (id: string, field: keyof Guarantor, value: string) => {
+  const updateGuarantor = (id: string, field: keyof LoanGuarantor, value: string) => {
     setGuarantors(guarantors.map(g => {
       if (g.id === id) {
         return { ...g, [field]: value };
@@ -190,7 +182,8 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
             phone_number: g.phone_number,
             relationship: g.relationship,
             id_type: g.id_type,
-            id_number: g.id_number
+            id_number: g.id_number,
+            address: g.address || "Not provided" // Provide a default address
           }));
           
           const { error: guarantorError } = await supabase
@@ -382,6 +375,15 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
                       />
                     </div>
                     
+                    <div className="space-y-2">
+                      <Label>Address</Label>
+                      <Input
+                        placeholder="Residential address"
+                        value={guarantor.address || ""}
+                        onChange={(e) => updateGuarantor(guarantor.id, "address", e.target.value)}
+                      />
+                    </div>
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-2">
                         <Label>ID Type</Label>
@@ -425,6 +427,15 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
       </DialogContent>
     </Dialog>
   );
+};
+
+// Add the missing calculate method
+const calculateMonthlyPayment = function(this: any) {
+  if (this.amount <= 0 || this.interestRate <= 0 || this.termMonths <= 0) return 0;
+  
+  const monthlyRate = this.interestRate / 100 / 12;
+  const payment = (this.amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -this.termMonths));
+  return payment;
 };
 
 // Add default export to fix import issues

@@ -1,64 +1,28 @@
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { useState } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { DeleteConfirmationModalProps } from "@/types/app";
 
-interface DeleteConfirmationModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onDelete: () => Promise<void>;
-  title: string;
-  message: string;
-}
-
-const DeleteConfirmationModal = ({
-  isOpen,
-  onClose,
-  onDelete,
-  title,
-  message,
-}: DeleteConfirmationModalProps) => {
-  const [loading, setLoading] = useState(false);
-
-  const handleDelete = async () => {
-    setLoading(true);
-    try {
-      await onDelete();
-    } finally {
-      setLoading(false);
-    }
-  };
-
+const DeleteConfirmationModal = ({ isOpen, onClose, onConfirm, customerName }: DeleteConfirmationModalProps) => {
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <DialogDescription>{message}</DialogDescription>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={loading}
-          >
-            {loading ? <LoadingSpinner /> : "Delete"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
+    <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete the customer
+            <span className="font-semibold"> {customerName} </span>
+            and remove their data from the database.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} className="bg-red-500 hover:bg-red-600">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
 
 export default DeleteConfirmationModal;

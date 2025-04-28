@@ -6,41 +6,59 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, ArrowUpDown } from "lucide-react";
+import { Search, Plus, ArrowLeftRight } from "lucide-react";
 import SavingsAccountModal from "@/components/savings/SavingsAccountModal";
 import TransactionModal from "@/components/savings/TransactionModal";
 import AuthGuard from "@/components/auth/AuthGuard";
 import { AccountType } from "@/types/app";
 import { format } from "date-fns";
 
-// Update SavingsAccount type to use AccountType
+interface SavingsProfile {
+  full_name: string;
+  phone_number: string;
+}
+
 interface SavingsAccount {
   id: string;
   account_number: string;
   user_id: string;
-  account_type: AccountType;
   balance: number;
+  account_type: AccountType;
   interest_rate: number;
   maturity_date: string | null;
   is_active: boolean;
   created_at: string;
-  profiles: {
-    full_name: string;
-    phone_number: string;
-  } | null;
+  profiles: SavingsProfile;
+}
+
+interface SavingsAccountModalState {
+  isOpen: boolean;
+  account: SavingsAccount | null;
+  mode: "create" | "edit";
+}
+
+interface TransactionModalState {
+  isOpen: boolean;
+  account: SavingsAccount | null;
+  type: "deposit" | "withdrawal";
 }
 
 const SavingsPage = () => {
   const [accounts, setAccounts] = useState<SavingsAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
-  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState<SavingsAccount | null>(null);
-  const [transactionType, setTransactionType] = useState<"deposit" | "withdrawal">("deposit");
+  const [accountModal, setAccountModal] = useState<SavingsAccountModalState>({
+    isOpen: false,
+    account: null,
+    mode: "create"
+  });
+  const [transactionModal, setTransactionModal] = useState<TransactionModalState>({
+    isOpen: false,
+    account: null,
+    type: "deposit"
+  });
   const { toast } = useToast();
 
-  // Fetch accounts on component mount
   useEffect(() => {
     fetchAccounts();
   }, []);
@@ -67,47 +85,78 @@ const SavingsPage = () => {
     }
   };
 
-  const handleOpenAccountModal = (account: SavingsAccount | null = null) => {
-    // Later in the component where the type error occurs, cast the account_type to AccountType
-    if (account) {
-      setSelectedAccount({
+  const handleOpenCreateModal = () => {
+    setAccountModal({
+      isOpen: true,
+      account: null,
+      mode: "create"
+    });
+  };
+
+  const handleOpenEditModal = (account: SavingsAccount) => {
+    setAccountModal({
+      isOpen: true,
+      account: {
         ...account,
         account_type: account.account_type as AccountType
-      });
-    } else {
-      setSelectedAccount(null);
-    }
-    setIsAccountModalOpen(true);
+      },
+      mode: "edit"
+    });
   };
 
   const handleOpenTransactionModal = (account: SavingsAccount, type: "deposit" | "withdrawal") => {
-    setSelectedAccount(account);
-    setTransactionType(type);
-    setIsTransactionModalOpen(true);
+    setTransactionModal({
+      isOpen: true,
+      account,
+      type
+    });
   };
 
-  const handleAccountCreated = () => {
-    setIsAccountModalOpen(false);
+  const handleCloseAccountModal = () => {
+    setAccountModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleCloseTransactionModal = () => {
+    setTransactionModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleAccountSaved = () => {
     fetchAccounts();
+    setAccountModal(prev => ({ ...prev, isOpen: false }));
+    toast({
+      title: "Success",
+      description: accountModal.mode === "create" 
+        ? "Savings account created successfully" 
+        : "Savings account updated successfully",
+    });
   };
 
-  const handleTransactionCompleted = () => {
-    setIsTransactionModalOpen(false);
+  const handleTransactionComplete = () => {
     fetchAccounts();
+    setTransactionModal(prev => ({ ...prev, isOpen: false }));
+    toast({
+      title: "Success",
+      description: `${transactionModal.type === "deposit" ? "Deposit" : "Withdrawal"} completed successfully`,
+    });
   };
 
-  // Filter accounts based on search query
   const filteredAccounts = accounts.filter(account => 
     account.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    account.profiles?.phone_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    account.account_number?.toLowerCase().includes(searchQuery.toLowerCase())
+    account.profiles?.phone_number?.includes(searchQuery) ||
+    account.account_number?.includes(searchQuery)
   );
 
-  // Format account type for display
-  const formatAccountType = (type: string) => {
-    return type.split("_").map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(" ");
+  const getAccountTypeBadge = (type: AccountType) => {
+    switch(type) {
+      case "regular":
+        return <Badge>Regular</Badge>;
+      case "fixed_deposit":
+        return <Badge variant="outline">Fixed Deposit</Badge>;
+      case "susu":
+        return <Badge variant="secondary">Susu</Badge>;
+      default:
+        return <Badge>{type}</Badge>;
+    }
   };
 
   return (
@@ -115,10 +164,10 @@ const SavingsPage = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Savings Accounts</h1>
-          <p className="text-gray-600">Manage customer savings accounts</p>
+          <p className="text-gray-600">Manage customer savings accounts and transactions</p>
         </div>
         <Button 
-          onClick={() => handleOpenAccountModal()} 
+          onClick={handleOpenCreateModal}
           className="flex items-center gap-2"
         >
           <Plus size={18} /> New Account
@@ -169,38 +218,45 @@ const SavingsPage = () => {
                       <div>{account.profiles?.full_name || "N/A"}</div>
                       <div className="text-xs text-gray-500">{account.profiles?.phone_number || "N/A"}</div>
                     </td>
-                    <td className="px-4 py-3">{formatAccountType(account.account_type)}</td>
+                    <td className="px-4 py-3">{getAccountTypeBadge(account.account_type)}</td>
                     <td className="px-4 py-3 font-medium">₵{account.balance.toFixed(2)}</td>
                     <td className="px-4 py-3">{account.interest_rate}%</td>
                     <td className="px-4 py-3">
                       {account.maturity_date 
                         ? format(new Date(account.maturity_date), "MMM d, yyyy") 
-                        : "N/A"
-                      }
+                        : "N/A"}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant={account.is_active ? "success" : "destructive"}>
+                      <Badge variant={account.is_active ? "default" : "destructive"}>
                         {account.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                      <div className="flex space-x-2">
                         <Button 
-                          variant="ghost" 
+                          variant="outline" 
                           size="sm"
-                          onClick={() => handleOpenAccountModal(account)}
+                          onClick={() => handleOpenEditModal(account)}
                         >
-                          <Edit size={16} className="mr-1" />
-                          Edit
+                          Details
                         </Button>
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => handleOpenTransactionModal(account, "deposit")}
                           className="text-green-600"
+                          disabled={!account.is_active}
                         >
-                          <ArrowUpDown size={16} className="mr-1" />
-                          Transact
+                          Deposit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenTransactionModal(account, "withdrawal")}
+                          className="text-amber-600"
+                          disabled={!account.is_active || account.balance <= 0}
+                        >
+                          Withdraw
                         </Button>
                       </div>
                     </td>
@@ -212,32 +268,31 @@ const SavingsPage = () => {
         </div>
       </div>
       
-      {/* Account Modal */}
+      {/* Savings Account Modal */}
       <SavingsAccountModal
-        isOpen={isAccountModalOpen}
-        onClose={() => setIsAccountModalOpen(false)}
-        onSave={handleAccountCreated}
-        account={selectedAccount}
+        isOpen={accountModal.isOpen}
+        onClose={handleCloseAccountModal}
+        onSave={handleAccountSaved}
+        account={accountModal.account}
+        mode={accountModal.mode}
       />
       
       {/* Transaction Modal */}
       <TransactionModal
-        isOpen={isTransactionModalOpen}
-        onClose={() => setIsTransactionModalOpen(false)}
-        onSave={handleTransactionCompleted}
-        account={selectedAccount}
-        type={transactionType}
+        isOpen={transactionModal.isOpen}
+        onClose={handleCloseTransactionModal}
+        onSave={handleTransactionComplete}
+        account={transactionModal.account}
+        type={transactionModal.type}
       />
     </AppLayout>
   );
 };
 
-const Savings = () => {
-  return (
-    <AuthGuard>
-      <SavingsPage />
-    </AuthGuard>
-  );
-};
+const Savings = () => (
+  <AuthGuard>
+    <SavingsPage />
+  </AuthGuard>
+);
 
 export default Savings;

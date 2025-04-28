@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,27 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { LoanStatus } from "@/types/app";
-
-interface LoanProfile {
-  full_name: string;
-  phone_number: string;
-}
-
-interface LoanTransaction {
-  id: string;
-  loan_id: string;
-  user_id: string;
-  amount: number;
-  transaction_type: string;
-  payment_method: string;
-  transaction_number: string;
-  reference_number: string;
-  description: string;
-  created_at: string;
-  performed_by: string;
-  performed_by_profile: LoanProfile | null;
-}
+import { LoanProfile, LoanStatus, LoanTransaction } from "@/types/app";
 
 interface Loan {
   id: string;
@@ -72,13 +53,13 @@ const LoanDetailsModal = ({ isOpen, onClose, loan, onUpdate }: Props) => {
     setLoadingTransactions(true);
     try {
       const { data, error } = await supabase
-        .from("loan_transactions")
-        .select("*, performed_by_profile:profiles(full_name)")
+        .from("transactions")
+        .select("*, performed_by_profile:profiles(full_name, phone_number)")
         .eq("loan_id", loanId)
         .order("created_at", { ascending: false });
         
       if (error) throw error;
-      setTransactions(data as LoanTransaction[]);
+      setTransactions(data ? data as unknown as LoanTransaction[] : []);
     } catch (error) {
       console.error("Error fetching transactions:", error);
       toast({
@@ -161,9 +142,9 @@ const LoanDetailsModal = ({ isOpen, onClose, loan, onUpdate }: Props) => {
   const getStatusBadgeVariant = (status: LoanStatus) => {
     switch(status) {
       case "pending": return "secondary";
-      case "approved": return "warning";
-      case "disbursed": return "warning";
-      case "active": return "success";
+      case "approved": return "outline"; // Changed from warning to outline
+      case "disbursed": return "outline"; // Changed from warning to outline
+      case "active": return "default"; // Changed from success to default
       case "fully_paid": return "outline";
       case "defaulted": return "destructive";
       default: return "default";
