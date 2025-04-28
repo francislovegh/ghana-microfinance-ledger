@@ -124,7 +124,7 @@ const LoansPage = () => {
       case "pending": return "secondary";
       case "approved": return "warning";
       case "disbursed": return "warning";
-      case "active": return "success";
+      case "active": return "default";  // Changed from "success" to "default"
       case "fully_paid": return "outline";
       case "defaulted": return "destructive";
       default: return "default";

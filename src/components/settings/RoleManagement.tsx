@@ -146,7 +146,7 @@ const RoleManagement = () => {
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant={user.is_verified ? "success" : "destructive"}>
+                      <Badge variant={user.is_verified ? "default" : "destructive"}>
                         {user.is_verified ? "Active" : "Inactive"}
                       </Badge>
                     </td>

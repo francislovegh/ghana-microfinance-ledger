@@ -12,6 +12,11 @@ export interface TransactionProfile {
   full_name: string;
 }
 
+export interface LoanProfile {
+  full_name: string;
+  phone_number: string;
+}
+
 export interface LoanTransaction {
   id: string;
   loan_id: string;
@@ -24,7 +29,7 @@ export interface LoanTransaction {
   description: string;
   created_at: string;
   performed_by: string;
-  performed_by_profile: TransactionProfile;
+  performed_by_profile: LoanProfile;
 }
 
 export interface Transaction {
