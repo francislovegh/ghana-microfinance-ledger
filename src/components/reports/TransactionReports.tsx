@@ -44,11 +44,10 @@ const TransactionReports = ({ dateRange }: TransactionReportsProps) => {
   const { isLoading, error, data } = useQuery({
     queryKey: ['transactionReports', dateRange],
     queryFn: async (): Promise<TransactionData> => {
-      // Get transaction data
-      // Fix: Use "profiles:user_id(full_name)" to clearly specify the join relationship
+      // Get transaction data - use performed_by to link to profiles
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
-        .select('*, profiles:user_id(full_name)')
+        .select('*, performed_by_profile:profiles!transactions_performed_by_fkey(full_name)')
         .gte('created_at', dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : '')
         .lte('created_at', dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : '');
         
@@ -57,8 +56,8 @@ const TransactionReports = ({ dateRange }: TransactionReportsProps) => {
       // Process transactions to include customer name
       const processedTransactions = transactions.map(transaction => ({
         ...transaction,
-        // Handle the case where profiles might be null or have a different structure
-        customer_name: transaction.profiles?.full_name || 'Unknown'
+        // Update to use performed_by_profile instead of profiles
+        customer_name: transaction.performed_by_profile?.full_name || 'Unknown'
       }));
       
       // Calculate transaction statistics
