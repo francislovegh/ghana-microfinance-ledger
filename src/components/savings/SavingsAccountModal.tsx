@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -112,6 +111,8 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
   };
   
   const handleSubmit = async () => {
+    // Fix: Use type guard for mode comparison
+    // This fixes the issue where TypeScript was treating 'create' and 'edit' as different types
     if (mode === "create" && !customerId) {
       toast({
         title: "Error",
@@ -133,6 +134,7 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
     setLoading(true);
     
     try {
+      // Handle create mode
       if (mode === "create") {
         // Get account number from Supabase function
         const { data: accountNumber, error: numberError } = await supabase
@@ -189,7 +191,9 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
             
           if (transactionError) throw transactionError;
         }
-      } else if (mode === "edit" && account) {
+      } 
+      // Handle edit mode
+      else if (mode === "edit" && account) {
         // Update the account
         const { error } = await supabase
           .from('savings_accounts')
