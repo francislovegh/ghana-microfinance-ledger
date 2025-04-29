@@ -48,12 +48,7 @@ const TransactionReports = ({ dateRange }: TransactionReportsProps) => {
       // Get transaction data
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
-        .select(`
-          *,
-          profiles:user_id (
-            full_name
-          )
-        `)
+        .select('*, user_profiles:user_id(full_name)')
         .gte('created_at', dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : '')
         .lte('created_at', dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : '');
         
@@ -61,7 +56,7 @@ const TransactionReports = ({ dateRange }: TransactionReportsProps) => {
       
       const processedTransactions = transactions.map(transaction => ({
         ...transaction,
-        customer_name: transaction.profiles?.full_name || 'Unknown'
+        customer_name: transaction.user_profiles?.full_name || 'Unknown'
       }));
       
       // Calculate transaction statistics

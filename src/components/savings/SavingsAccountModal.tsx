@@ -332,7 +332,7 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Saving..." : mode === "create" ? "Create Account" : "Update Account"}
+            {loading ? "Saving..." : (mode === "create" ? "Create Account" : "Update Account")}
           </Button>
         </DialogFooter>
       </DialogContent>

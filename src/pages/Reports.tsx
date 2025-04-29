@@ -1,20 +1,18 @@
 
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
 import { Calendar, FileText, Printer, Download } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { DateRange, DateRangePicker } from "@/components/ui/date-range-picker";
-import { supabase } from "@/integrations/supabase/client";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import AuthGuard from "@/components/auth/AuthGuard";
 import SavingsReports from "@/components/reports/SavingsReports";
 import LoanReports from "@/components/reports/LoanReports";
 import TransactionReports from "@/components/reports/TransactionReports";
 import CustomerReports from "@/components/reports/CustomerReports";
+import { useToast } from "@/hooks/use-toast";
 
 const ReportsPage = () => {
   const [activeTab, setActiveTab] = useState("savings");
@@ -22,19 +20,24 @@ const ReportsPage = () => {
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date())
   });
+  const { toast } = useToast();
 
   const handlePrint = () => {
     window.print();
   };
 
   const handleDownloadPDF = () => {
-    // In a real implementation, this would generate a PDF
-    alert("PDF download functionality would be implemented here");
+    toast({
+      title: "PDF Download",
+      description: "PDF download functionality would be implemented here",
+    });
   };
 
   const handleDownloadCSV = () => {
-    // In a real implementation, this would generate a CSV file
-    alert("CSV download functionality would be implemented here");
+    toast({
+      title: "CSV Download",
+      description: "CSV download functionality would be implemented here",
+    });
   };
 
   return (

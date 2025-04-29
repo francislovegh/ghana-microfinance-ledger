@@ -43,7 +43,7 @@ const LoanReports = ({ dateRange }: LoanReportsProps) => {
       // Get loan data
       const { data: loans, error: loansError } = await supabase
         .from('loans')
-        .select('*, profiles:user_id(full_name)')
+        .select('*, profiles:user_id(full_name), status')
         .gte('created_at', dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : '')
         .lte('created_at', dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : '');
         
@@ -51,13 +51,14 @@ const LoanReports = ({ dateRange }: LoanReportsProps) => {
       
       const processedLoans = loans.map(loan => ({
         ...loan,
-        customer_name: loan.profiles?.full_name || 'Unknown'
+        customer_name: loan.profiles?.full_name || 'Unknown',
+        loan_status: loan.status as LoanStatus
       }));
       
       // Calculate loan statistics
       const totalLoans = processedLoans.length;
       const activeLoans = processedLoans.filter(l => 
-        ['approved', 'disbursed', 'active'].includes(l.loan_status)
+        ['approved', 'disbursed', 'active'].includes(l.status as string)
       ).length;
       const totalDisbursed = processedLoans.reduce((sum, loan) => sum + loan.amount, 0);
       const totalOutstanding = processedLoans.reduce((sum, loan) => sum + (loan.remaining_balance || 0), 0);
@@ -65,7 +66,7 @@ const LoanReports = ({ dateRange }: LoanReportsProps) => {
       // Group loans by status
       const loansByStatus = Object.entries(
         processedLoans.reduce((acc: Record<string, any>, loan) => {
-          const status = loan.loan_status;
+          const status = loan.status as LoanStatus;
           if (!acc[status]) {
             acc[status] = {
               status,
@@ -84,7 +85,17 @@ const LoanReports = ({ dateRange }: LoanReportsProps) => {
       // Get recent loans
       const recentLoans = processedLoans
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5);
+        .slice(0, 5)
+        .map(loan => ({
+          id: loan.id,
+          loan_number: loan.loan_number,
+          amount: loan.amount,
+          remaining_balance: loan.remaining_balance,
+          interest_rate: loan.interest_rate,
+          loan_status: loan.status as LoanStatus,
+          created_at: loan.created_at,
+          customer_name: loan.customer_name
+        }));
       
       return {
         totalLoans,
