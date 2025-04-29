@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +9,7 @@ import Customers from "./pages/Customers";
 import Savings from "./pages/Savings";
 import Loans from "./pages/Loans";
 import Transactions from "./pages/Transactions";
+import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import Unauthorized from "./pages/Unauthorized";
@@ -39,6 +41,7 @@ const App = () => (
           <Route path="/savings" element={<Savings />} />
           <Route path="/loans" element={<Loans />} />
           <Route path="/transactions" element={<Transactions />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/settings/sync" element={<Settings />} />
           <Route path="/settings/backup" element={<Settings />} />
