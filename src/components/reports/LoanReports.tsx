@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { DateRange } from "@/components/ui/date-range-picker";
@@ -40,7 +39,7 @@ const LoanReports = ({ dateRange }: LoanReportsProps) => {
   const { isLoading, error, data } = useQuery({
     queryKey: ['loanReports', dateRange],
     queryFn: async (): Promise<LoanData> => {
-      // Get loan data - specify the column relationship with profiles(full_name)
+      // Get loan data - specify the column relationship with profiles:user_id(full_name)
       const { data: loans, error: loansError } = await supabase
         .from('loans')
         .select('*, profiles:user_id(full_name)')

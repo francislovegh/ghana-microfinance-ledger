@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { AccountType } from "@/types/app";
 import { format } from "date-fns";
 
 interface SavingsProfile {
+  id: string;  // Added id property to match the expected interface
   full_name: string;
   phone_number: string;
 }
@@ -68,7 +68,7 @@ const SavingsPage = () => {
     try {
       const { data, error } = await supabase
         .from("savings_accounts")
-        .select("*, profiles(full_name, phone_number)")
+        .select("*, profiles(full_name, phone_number, id)")
         .order("created_at", { ascending: false });
 
       if (error) throw error;

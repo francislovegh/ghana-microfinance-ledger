@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { DateRange } from "@/components/ui/date-range-picker";
@@ -46,7 +45,7 @@ const TransactionReports = ({ dateRange }: TransactionReportsProps) => {
     queryKey: ['transactionReports', dateRange],
     queryFn: async (): Promise<TransactionData> => {
       // Get transaction data
-      // Fix: specify the column name with user_id to avoid ambiguity
+      // Fix: Use "profiles:user_id(full_name)" to clearly specify the join relationship
       const { data: transactions, error: transactionsError } = await supabase
         .from('transactions')
         .select('*, profiles:user_id(full_name)')
@@ -58,7 +57,7 @@ const TransactionReports = ({ dateRange }: TransactionReportsProps) => {
       // Process transactions to include customer name
       const processedTransactions = transactions.map(transaction => ({
         ...transaction,
-        // Handle the case where profiles might be null
+        // Handle the case where profiles might be null or have a different structure
         customer_name: transaction.profiles?.full_name || 'Unknown'
       }));
       
