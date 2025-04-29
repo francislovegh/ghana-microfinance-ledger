@@ -1,14 +1,16 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PaymentMethod, LoanStatus } from "@/types/app";
+import { format } from "date-fns";
 
 interface LoanProfile {
   full_name: string;
@@ -31,6 +33,14 @@ interface Loan {
   profiles: LoanProfile | null;
 }
 
+interface LoanSchedule {
+  id: string;
+  payment_number: number;
+  due_date: string;
+  total_amount: number;
+  is_paid: boolean;
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -44,13 +54,55 @@ const LoanRepaymentModal = ({ isOpen, onClose, onSave, loan }: Props) => {
   const [reference, setReference] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isEarlyPayment, setIsEarlyPayment] = useState(false);
+  const [schedules, setSchedules] = useState<LoanSchedule[]>([]);
+  const [nextPaymentAmount, setNextPaymentAmount] = useState<number>(0);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (loan && isOpen) {
+      // Set default payment amount to next payment due
+      fetchNextPayment(loan.id);
+      setDescription(`Loan repayment for ${loan.loan_number}`);
+    }
+  }, [loan, isOpen]);
+
+  const fetchNextPayment = async (loanId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("loan_schedules")
+        .select("*")
+        .eq("loan_id", loanId)
+        .eq("is_paid", false)
+        .order("payment_number", { ascending: true });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setSchedules(data);
+        setNextPaymentAmount(data[0].total_amount);
+        setAmount(data[0].total_amount);
+      } else if (loan?.remaining_balance && loan.remaining_balance > 0) {
+        // If no schedule but balance remaining, set full remaining balance
+        setNextPaymentAmount(loan.remaining_balance);
+        setAmount(loan.remaining_balance);
+      }
+    } catch (error) {
+      console.error("Error fetching next payment:", error);
+    }
+  };
   
   const resetForm = () => {
     setAmount(0);
     setPaymentMethod("cash");
     setReference("");
     setDescription("");
+    setIsEarlyPayment(false);
+  };
+
+  const handleAmountChange = (value: number) => {
+    setAmount(value);
+    setIsEarlyPayment(value > nextPaymentAmount);
   };
   
   const handleSubmit = async () => {
@@ -74,6 +126,15 @@ const LoanRepaymentModal = ({ isOpen, onClose, onSave, loan }: Props) => {
       
       if (numberError) throw numberError;
       
+      // Process payment through the new function
+      const { data: excessAmount, error: processError } = await supabase
+        .rpc('process_loan_payment', {
+          p_loan_id: loan.id,
+          p_amount: amount
+        });
+      
+      if (processError) throw processError;
+      
       // Record the transaction
       const { error: transactionError } = await supabase
         .from('transactions')
@@ -91,26 +152,16 @@ const LoanRepaymentModal = ({ isOpen, onClose, onSave, loan }: Props) => {
       
       if (transactionError) throw transactionError;
       
-      // Update loan record
-      const newTotalPaid = (loan.total_paid || 0) + amount;
-      const newRemainingBalance = loan.amount - newTotalPaid;
-      const newStatus = newRemainingBalance <= 0 ? "fully_paid" : loan.status;
+      let successMessage = "Payment recorded successfully";
       
-      const { error: loanUpdateError } = await supabase
-        .from('loans')
-        .update({
-          total_paid: newTotalPaid,
-          remaining_balance: newRemainingBalance,
-          status: newStatus,
-          // Calculate next payment date logic here if needed
-        })
-        .eq('id', loan.id);
-      
-      if (loanUpdateError) throw loanUpdateError;
+      // Check if there was excess payment
+      if (excessAmount && excessAmount > 0) {
+        successMessage += ` (Excess amount: ₵${excessAmount.toFixed(2)})`;
+      }
       
       toast({
         title: "Success",
-        description: "Payment recorded successfully",
+        description: successMessage,
       });
       
       resetForm();
@@ -155,6 +206,15 @@ const LoanRepaymentModal = ({ isOpen, onClose, onSave, loan }: Props) => {
                 <p className="text-sm text-gray-500">Remaining Balance</p>
                 <p className="font-medium">₵{(loan.remaining_balance || loan.amount).toFixed(2)}</p>
               </div>
+              {loan.next_payment_date && (
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Next Payment Due</p>
+                  <p className="font-medium">
+                    {format(new Date(loan.next_payment_date), "MMMM d, yyyy")} 
+                    {nextPaymentAmount > 0 && ` - ₵${nextPaymentAmount.toFixed(2)}`}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           
@@ -169,10 +229,28 @@ const LoanRepaymentModal = ({ isOpen, onClose, onSave, loan }: Props) => {
                   placeholder="0.00"
                   className="pl-6"
                   value={amount || ""}
-                  onChange={(e) => setAmount(Number(e.target.value))}
+                  onChange={(e) => handleAmountChange(Number(e.target.value))}
                 />
               </div>
             </div>
+
+            {isEarlyPayment && (
+              <div className="flex items-start space-x-2 bg-blue-50 p-3 rounded-md">
+                <div>
+                  <Checkbox 
+                    id="earlyPayment" 
+                    checked={true} 
+                    disabled={true}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="earlyPayment">Early/Excess Payment</Label>
+                  <p className="text-sm text-gray-600">
+                    This payment is higher than the next scheduled amount. The excess will be applied to future payments.
+                  </p>
+                </div>
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="paymentMethod">Payment Method</Label>

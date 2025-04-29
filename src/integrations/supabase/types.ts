@@ -463,9 +463,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_loan_schedule: {
+        Args: { p_loan_id: string }
+        Returns: undefined
+      }
       generate_transaction_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      process_loan_payment: {
+        Args: { p_loan_id: string; p_amount: number; p_payment_date?: string }
+        Returns: number
       }
     }
     Enums: {

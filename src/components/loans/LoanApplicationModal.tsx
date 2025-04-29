@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { IdType, LoanGuarantor } from "@/types/app";
 import { nanoid } from "nanoid";
+import LoanCollateralForm, { Collateral } from "./LoanCollateralForm";
 
 interface LoanApplicationModalProps {
   isOpen: boolean;
@@ -43,6 +45,7 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
       address: "" 
     }
   ]);
+  const [collaterals, setCollaterals] = useState<Collateral[]>([]);
   const { toast } = useToast();
 
   // Fix for guarantor ID type selection
@@ -176,6 +179,8 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
         
       if (fetchError) throw fetchError;
       
+      const loanId = loanData.id;
+      
       // Insert guarantors
       if (guarantors.length > 0) {
         const validGuarantors = guarantors.filter(g => 
@@ -186,7 +191,7 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
         
         if (validGuarantors.length > 0) {
           const guarantorsForInsert = validGuarantors.map(g => ({
-            loan_id: loanData.id,
+            loan_id: loanId,
             full_name: g.full_name,
             phone_number: g.phone_number,
             relationship: g.relationship,
@@ -203,11 +208,36 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
         }
       }
       
+      // Insert collaterals
+      if (collaterals.length > 0) {
+        const validCollaterals = collaterals.filter(c => 
+          c.description.trim() !== "" && 
+          c.value > 0
+        );
+        
+        if (validCollaterals.length > 0) {
+          const collateralsForInsert = validCollaterals.map(c => ({
+            loan_id: loanId,
+            collateral_type: c.collateral_type,
+            description: c.description,
+            value: c.value,
+            document_url: c.document_url || null
+          }));
+          
+          const { error: collateralError } = await supabase
+            .from('loan_collaterals')
+            .insert(collateralsForInsert);
+            
+          if (collateralError) throw collateralError;
+        }
+      }
+      
       toast({
         title: "Success",
         description: "Loan application created successfully",
       });
       
+      resetForm();
       onSave();
     } catch (error) {
       console.error("Error creating loan application:", error);
@@ -219,6 +249,25 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setAmount(0);
+    setInterestRate(15);
+    setTermMonths(12);
+    setPurpose("");
+    setCustomerId("");
+    setGuarantors([{
+      id: nanoid(),
+      loan_id: "",
+      full_name: "",
+      phone_number: "",
+      relationship: "",
+      id_type: "ghana_card",
+      id_number: "",
+      address: ""
+    }]);
+    setCollaterals([]);
   };
 
   const calculateMonthlyPayment = () => {
@@ -328,6 +377,13 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
                 </div>
               </CardContent>
             </Card>
+            
+            <div className="mt-4">
+              <LoanCollateralForm 
+                collaterals={collaterals} 
+                onChange={setCollaterals} 
+              />
+            </div>
           </div>
           
           <Card>
@@ -438,15 +494,5 @@ const LoanApplicationModal = ({ isOpen, onClose, onSave }: LoanApplicationModalP
   );
 };
 
-// Add the missing calculate method
-const calculateMonthlyPayment = function(this: any) {
-  if (this.amount <= 0 || this.interestRate <= 0 || this.termMonths <= 0) return 0;
-  
-  const monthlyRate = this.interestRate / 100 / 12;
-  const payment = (this.amount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -this.termMonths));
-  return payment;
-};
-
-// Add default export to fix import issues
 export default LoanApplicationModal;
 export type { LoanApplicationModalProps };

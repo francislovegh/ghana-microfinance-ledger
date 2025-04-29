@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -6,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Eye, ArrowDown } from "lucide-react";
+import { Plus, Search, Eye, ArrowDown, Calendar } from "lucide-react";
 import LoanApplicationModal from "@/components/loans/LoanApplicationModal";
 import LoanDetailsModal from "@/components/loans/LoanDetailsModal";
 import LoanRepaymentModal from "@/components/loans/LoanRepaymentModal";
+import LoanScheduleModal from "@/components/loans/LoanScheduleModal";
 import AuthGuard from "@/components/auth/AuthGuard";
 import { LoanStatus } from "@/types/app";
 import { format } from "date-fns";
@@ -44,6 +44,7 @@ const LoansPage = () => {
   const [isApplicationModalOpen, setIsApplicationModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isRepaymentModalOpen, setIsRepaymentModalOpen] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const { toast } = useToast();
 
@@ -92,6 +93,11 @@ const LoansPage = () => {
     setIsRepaymentModalOpen(true);
   };
 
+  const handleOpenScheduleModal = (loan: Loan) => {
+    setSelectedLoan(loan);
+    setIsScheduleModalOpen(true);
+  };
+
   const handleApplicationCreated = () => {
     setIsApplicationModalOpen(false);
     fetchLoans();
@@ -122,8 +128,8 @@ const LoansPage = () => {
   const getStatusBadgeVariant = (status: LoanStatus) => {
     switch(status) {
       case "pending": return "secondary";
-      case "approved": return "outline"; // Changed from warning to outline
-      case "disbursed": return "outline"; // Changed from warning to outline
+      case "approved": return "outline"; 
+      case "disbursed": return "outline"; 
       case "active": return "default";
       case "fully_paid": return "outline";
       case "defaulted": return "destructive";
@@ -217,7 +223,7 @@ const LoansPage = () => {
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <Button 
                           variant="ghost" 
                           size="sm"
@@ -235,6 +241,17 @@ const LoansPage = () => {
                           >
                             <ArrowDown size={16} className="mr-1" />
                             Payment
+                          </Button>
+                        )}
+                        {(loan.status === "active" || loan.status === "disbursed") && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleOpenScheduleModal(loan)}
+                            className="text-blue-600"
+                          >
+                            <Calendar size={16} className="mr-1" />
+                            Schedule
                           </Button>
                         )}
                       </div>
@@ -267,6 +284,13 @@ const LoansPage = () => {
         isOpen={isRepaymentModalOpen}
         onClose={() => setIsRepaymentModalOpen(false)}
         onSave={handleRepaymentComplete}
+        loan={selectedLoan}
+      />
+
+      {/* Loan Schedule Modal */}
+      <LoanScheduleModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
         loan={selectedLoan}
       />
     </AppLayout>

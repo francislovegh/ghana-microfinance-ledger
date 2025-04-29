@@ -60,6 +60,29 @@ export interface LoanGuarantor {
   email?: string;
 }
 
+export interface LoanCollateral {
+  id: string;
+  loan_id: string;
+  collateral_type: string;
+  description: string;
+  value: number;
+  document_url?: string | null;
+}
+
+export interface LoanScheduleItem {
+  id: string;
+  loan_id: string;
+  payment_number: number;
+  due_date: string;
+  principal_amount: number;
+  interest_amount: number;
+  total_amount: number;
+  paid_amount: number | null;
+  is_paid: boolean;
+  payment_date: string | null;
+  penalty_amount: number | null;
+}
+
 export interface DeleteConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
