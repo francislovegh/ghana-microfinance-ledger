@@ -123,8 +123,8 @@ const TransactionsPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [methodFilter, setMethodFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [methodFilter, setMethodFilter] = useState("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const { toast } = useToast();
@@ -203,11 +203,11 @@ const TransactionsPage = () => {
       (transaction.profiles?.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (transaction.reference_number?.includes(searchQuery));
       
-    // Apply type filter
-    const typeMatches = !typeFilter || transaction.transaction_type === typeFilter;
+    // Apply type filter - updated to use "all" instead of empty string
+    const typeMatches = typeFilter === "all" || transaction.transaction_type === typeFilter;
     
-    // Apply method filter
-    const methodMatches = !methodFilter || transaction.payment_method === methodFilter;
+    // Apply method filter - updated to use "all" instead of empty string
+    const methodMatches = methodFilter === "all" || transaction.payment_method === methodFilter;
     
     // Apply date range filter
     const dateMatches = !dateRange?.from || !dateRange?.to || 
@@ -251,8 +251,8 @@ const TransactionsPage = () => {
   
   const resetFilters = () => {
     setSearchQuery("");
-    setTypeFilter("");
-    setMethodFilter("");
+    setTypeFilter("all");
+    setMethodFilter("all");
     setDateRange(undefined);
   };
 
@@ -296,7 +296,7 @@ const TransactionsPage = () => {
                   <SelectValue placeholder="All transaction types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All transaction types</SelectItem>
+                  <SelectItem value="all">All transaction types</SelectItem>
                   <SelectItem value="deposit">Deposit</SelectItem>
                   <SelectItem value="withdrawal">Withdrawal</SelectItem>
                   <SelectItem value="loan_disbursement">Loan Disbursement</SelectItem>
@@ -313,7 +313,7 @@ const TransactionsPage = () => {
                   <SelectValue placeholder="All payment methods" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All payment methods</SelectItem>
+                  <SelectItem value="all">All payment methods</SelectItem>
                   <SelectItem value="cash">Cash</SelectItem>
                   <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
                   <SelectItem value="mtn_momo">MTN Mobile Money</SelectItem>
