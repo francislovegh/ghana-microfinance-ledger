@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { DateRange } from "@/components/ui/date-range-picker";
@@ -42,7 +43,7 @@ const LoanReports = ({ dateRange }: LoanReportsProps) => {
       // Get loan data - specify the column relationship with profiles(full_name)
       const { data: loans, error: loansError } = await supabase
         .from('loans')
-        .select('*, profiles:user_id(full_name), status')
+        .select('*, profiles:user_id(full_name)')
         .gte('created_at', dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : '')
         .lte('created_at', dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : '');
         

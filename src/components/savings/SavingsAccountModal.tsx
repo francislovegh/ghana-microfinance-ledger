@@ -1,81 +1,101 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { AccountType } from "@/types/app";
-import { addMonths } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface Profile {
-  id: string;
+interface SavingsProfile {
   full_name: string;
   phone_number: string;
+  id: string;
+  email?: string;
 }
 
 interface SavingsAccount {
   id: string;
   account_number: string;
-  user_id: string;
+  account_type: "regular" | "fixed_deposit" | "susu";
   balance: number;
-  account_type: AccountType;
   interest_rate: number;
-  maturity_date: string | null;
   is_active: boolean;
+  maturity_date?: string;
+  user_id: string;
+  created_at: string;
+  profiles?: SavingsProfile;
 }
 
-type ModalMode = "create" | "edit";
-
-interface Props {
+interface SavingsAccountModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  account: SavingsAccount | null;
-  mode: ModalMode;
+  mode: "create" | "edit";
+  account?: SavingsAccount;
+  customerId?: string;
 }
 
-const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) => {
-  const [customers, setCustomers] = useState<Profile[]>([]);
-  const [customerId, setCustomerId] = useState<string>("");
-  const [accountType, setAccountType] = useState<AccountType>("regular");
+const SavingsAccountModal = ({ 
+  isOpen, 
+  onClose, 
+  onSave, 
+  mode, 
+  account, 
+  customerId 
+}: SavingsAccountModalProps) => {
+  const [accountType, setAccountType] = useState<"regular" | "fixed_deposit" | "susu">("regular");
+  const [interestRate, setInterestRate] = useState<number>(0);
+  const [maturityDate, setMaturityDate] = useState<string>("");
   const [initialDeposit, setInitialDeposit] = useState<number>(0);
-  const [interestRate, setInterestRate] = useState<number>(5);
-  const [maturityDate, setMaturityDate] = useState<Date | undefined>(undefined);
-  const [isActive, setIsActive] = useState<boolean>(true);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [customerOptions, setCustomerOptions] = useState<SavingsProfile[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
-    if (isOpen) {
-      fetchCustomers();
+    if (mode === "edit" && account) {
+      setAccountType(account.account_type);
+      setInterestRate(account.interest_rate);
+      if (account.maturity_date) {
+        setMaturityDate(account.maturity_date.split('T')[0]);
+      }
+    } else {
+      // Reset form for create mode
+      setAccountType("regular");
+      setInterestRate(0);
+      setMaturityDate("");
+      setInitialDeposit(0);
       
-      if (mode === "edit" && account) {
-        setCustomerId(account.user_id);
-        setAccountType(account.account_type);
-        setInterestRate(account.interest_rate);
-        setMaturityDate(account.maturity_date ? new Date(account.maturity_date) : undefined);
-        setIsActive(account.is_active);
-      } else {
-        resetForm();
+      // Set selectedCustomerId if provided
+      if (customerId) {
+        setSelectedCustomerId(customerId);
       }
     }
-  }, [isOpen, account, mode]);
+    
+    // Fetch customer options if creating a new account
+    if (mode === "create" && !customerId) {
+      fetchCustomers();
+    }
+  }, [isOpen, mode, account, customerId]);
   
   const fetchCustomers = async () => {
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, phone_number")
-        .eq("role", "customer")
-        .order("full_name");
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone_number, email')
+        .order('full_name', { ascending: true });
       
-      if (error) throw error;
-      setCustomers(data || []);
+      if (error) {
+        throw error;
+      }
+      
+      if (profiles) {
+        setCustomerOptions(profiles);
+      }
     } catch (error) {
-      console.error("Error fetching customers:", error);
+      console.error('Error fetching customers:', error);
       toast({
         title: "Error",
         description: "Failed to load customers",
@@ -84,35 +104,8 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
     }
   };
   
-  const resetForm = () => {
-    setCustomerId("");
-    setAccountType("regular");
-    setInitialDeposit(0);
-    setInterestRate(5);
-    setMaturityDate(undefined);
-    setIsActive(true);
-  };
-  
-  const handleAccountTypeChange = (value: string) => {
-    const accountType = value as AccountType;
-    setAccountType(accountType);
-    
-    // Set default values based on account type
-    if (accountType === "fixed_deposit") {
-      setInterestRate(15);
-      setMaturityDate(addMonths(new Date(), 12));
-    } else if (accountType === "susu") {
-      setInterestRate(7.5);
-      setMaturityDate(addMonths(new Date(), 6));
-    } else {
-      setInterestRate(5);
-      setMaturityDate(undefined);
-    }
-  };
-  
   const handleSubmit = async () => {
-    // Fix: Use type guard for mode comparison
-    // This fixes the issue where TypeScript was treating 'create' and 'edit' as different types
+    // Fix: Use string comparison instead of type comparison 
     if (mode === "create" && !customerId) {
       toast({
         title: "Error",
@@ -122,10 +115,10 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
       return;
     }
     
-    if (mode === "create" && initialDeposit < 0) {
+    if (accountType === "fixed_deposit" && !maturityDate) {
       toast({
         title: "Error",
-        description: "Initial deposit cannot be negative",
+        description: "Please specify a maturity date for fixed deposit accounts",
         variant: "destructive",
       });
       return;
@@ -139,53 +132,45 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
         // Get account number from Supabase function
         const { data: accountNumber, error: numberError } = await supabase
           .rpc('generate_account_number');
-          
+        
         if (numberError) throw numberError;
         
-        // Create the account
-        const { error: accountError } = await supabase
+        const userId = customerId || selectedCustomerId;
+        
+        // Create new account
+        const { data: newAccount, error } = await supabase
           .from('savings_accounts')
           .insert({
-            user_id: customerId,
+            account_number: accountNumber,
             account_type: accountType,
             interest_rate: interestRate,
-            balance: initialDeposit,
-            maturity_date: maturityDate?.toISOString() || null,
-            is_active: isActive,
-            account_number: accountNumber
-          });
-          
-        if (accountError) throw accountError;
+            maturity_date: accountType === "fixed_deposit" ? maturityDate : null,
+            user_id: userId,
+          })
+          .select('*')
+          .single();
         
-        // If there's an initial deposit, record a transaction
+        if (error) throw error;
+        
+        // If initial deposit > 0, create a transaction for it
         if (initialDeposit > 0) {
           // Generate transaction number
-          const { data: transactionNumber, error: transNumberError } = await supabase
+          const { data: transactionNumber, error: tnError } = await supabase
             .rpc('generate_transaction_number');
-            
-          if (transNumberError) throw transNumberError;
           
-          // Get the inserted account
-          const { data: accountData, error: fetchError } = await supabase
-            .from('savings_accounts')
-            .select('id')
-            .eq('account_number', accountNumber)
-            .single();
-            
-          if (fetchError) throw fetchError;
+          if (tnError) throw tnError;
           
-          // Record the deposit transaction
+          // Create deposit transaction
           const { error: transactionError } = await supabase
             .from('transactions')
             .insert({
-              account_id: accountData.id,
-              user_id: customerId,
+              account_id: newAccount.id,
+              user_id: userId,
               amount: initialDeposit,
-              transaction_type: "deposit",
-              payment_method: "cash",
+              transaction_type: 'deposit',
+              payment_method: 'cash', // Default
               transaction_number: transactionNumber,
-              reference_number: `Initial deposit for account ${accountNumber}`,
-              description: "Initial account deposit",
+              description: `Initial deposit for account ${accountNumber}`,
               performed_by: (await supabase.auth.getUser()).data.user?.id || ""
             });
             
@@ -200,32 +185,38 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
           .update({
             account_type: accountType,
             interest_rate: interestRate,
-            maturity_date: maturityDate?.toISOString() || null,
-            is_active: isActive
+            maturity_date: accountType === "fixed_deposit" ? maturityDate : null,
           })
           .eq('id', account.id);
-          
+        
         if (error) throw error;
       }
       
       toast({
         title: "Success",
-        description: mode === "create" ? "Account created successfully" : "Account updated successfully",
+        description: `Account ${mode === "create" ? "created" : "updated"} successfully`,
       });
       
+      // Reset form and close modal
+      setAccountType("regular");
+      setInterestRate(0);
+      setMaturityDate("");
+      setInitialDeposit(0);
+      setSelectedCustomerId(null);
       onSave();
+      onClose();
     } catch (error) {
-      console.error("Error saving account:", error);
+      console.error('Error saving account:', error);
       toast({
         title: "Error",
-        description: `Failed to ${mode === "create" ? "create" : "update"} account`,
+        description: `Failed to ${mode} account`,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
@@ -235,18 +226,21 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
-          {mode === "create" && customers.length > 0 && (
+        <div className="space-y-4 py-4">
+          {mode === "create" && !customerId && (
             <div className="space-y-2">
-              <Label htmlFor="customer">Customer</Label>
-              <Select value={customerId} onValueChange={setCustomerId} disabled={mode === "edit"}>
-                <SelectTrigger>
+              <Label htmlFor="customerId">Customer</Label>
+              <Select 
+                value={selectedCustomerId || undefined} 
+                onValueChange={setSelectedCustomerId}
+              >
+                <SelectTrigger id="customerId">
                   <SelectValue placeholder="Select customer" />
                 </SelectTrigger>
-                <SelectContent className="max-h-80">
-                  {customers.map((customer) => (
+                <SelectContent>
+                  {customerOptions.map((customer) => (
                     <SelectItem key={customer.id} value={customer.id}>
-                      {customer.full_name} - {customer.phone_number}
+                      {customer.full_name} ({customer.phone_number})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -254,89 +248,70 @@ const SavingsAccountModal = ({ isOpen, onClose, onSave, account, mode }: Props) 
             </div>
           )}
           
-          {mode === "edit" && account && (
-            <div className="bg-gray-50 p-4 rounded-md mb-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">Account Number</p>
-                  <p className="font-medium">{account.account_number}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Current Balance</p>
-                  <p className="font-medium">₵{account.balance.toFixed(2)}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          
           <div className="space-y-2">
             <Label htmlFor="accountType">Account Type</Label>
             <Select 
               value={accountType} 
-              onValueChange={handleAccountTypeChange}
+              onValueChange={(value) => setAccountType(value as "regular" | "fixed_deposit" | "susu")}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select account type" />
+              <SelectTrigger id="accountType">
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="regular">Regular Savings</SelectItem>
                 <SelectItem value="fixed_deposit">Fixed Deposit</SelectItem>
-                <SelectItem value="susu">Susu</SelectItem>
+                <SelectItem value="susu">Susu Savings</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          
-          {mode === "create" && (
-            <div className="space-y-2">
-              <Label htmlFor="initialDeposit">Initial Deposit (₵)</Label>
-              <Input
-                id="initialDeposit"
-                type="number"
-                value={initialDeposit || ""}
-                onChange={(e) => setInitialDeposit(Number(e.target.value))}
-                min="0"
-                step="0.01"
-              />
-            </div>
-          )}
           
           <div className="space-y-2">
             <Label htmlFor="interestRate">Interest Rate (%)</Label>
             <Input
               id="interestRate"
               type="number"
-              value={interestRate || ""}
-              onChange={(e) => setInterestRate(Number(e.target.value))}
+              step="0.01"
               min="0"
-              step="0.1"
+              max="100"
+              value={interestRate}
+              onChange={(e) => setInterestRate(parseFloat(e.target.value))}
             />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="maturityDate">Maturity Date {accountType === "regular" && "(Optional)"}</Label>
-            <DatePicker
-              date={maturityDate}
-              onSelect={setMaturityDate}
-              disabled={false}
-            />
-          </div>
+          {accountType === "fixed_deposit" && (
+            <div className="space-y-2">
+              <Label htmlFor="maturityDate">Maturity Date</Label>
+              <Input
+                id="maturityDate"
+                type="date"
+                value={maturityDate}
+                onChange={(e) => setMaturityDate(e.target.value)}
+              />
+            </div>
+          )}
           
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            <Label htmlFor="isActive">Account is active</Label>
-          </div>
+          {mode === "create" && (
+            <div className="space-y-2">
+              <Label htmlFor="initialDeposit">Initial Deposit (Optional)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-2">₵</span>
+                <Input
+                  id="initialDeposit"
+                  type="number"
+                  placeholder="0.00"
+                  className="pl-6"
+                  value={initialDeposit}
+                  onChange={(e) => setInitialDeposit(parseFloat(e.target.value) || 0)}
+                />
+              </div>
+            </div>
+          )}
         </div>
         
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Saving..." : (mode === "create" ? "Create Account" : "Update Account")}
+            {loading ? "Saving..." : mode === "create" ? "Create Account" : "Update Account"}
           </Button>
         </DialogFooter>
       </DialogContent>
