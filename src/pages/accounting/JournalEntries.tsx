@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/card";
@@ -239,7 +238,6 @@ const JournalEntriesPage = () => {
                         <DatePicker 
                           date={entryDate} 
                           onSelect={setEntryDate} 
-                          className="w-full" 
                         />
                       </div>
                       <div className="space-y-2">
