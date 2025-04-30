@@ -13,14 +13,10 @@ import {
   Settings,
   BarChart2,
   LogOut,
-  CloudUpload,
-  DatabaseBackup,
   BookOpen,
   Landmark,
   ChevronRight,
-  Calculator,
   ReceiptText,
-  Banknote
 } from "lucide-react";
 import {
   SidebarProvider,
@@ -34,7 +30,6 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarTrigger,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent
@@ -106,48 +101,58 @@ const ShadcnSidebar = () => {
     }
   };
 
+  // Check if the current path matches the given path
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+
+  // Check if the location starts with a specific path
+  const isInPath = (basePath: string) => {
+    return location.pathname.startsWith(basePath);
+  };
+
   const mainMenuItems = [
     {
       name: "Dashboard",
       icon: Home,
       href: "/",
       roles: ["admin", "teller", "loan_officer", "field_agent"],
-      isActive: location.pathname === "/"
+      isActive: isActive("/")
     },
     {
       name: "Customers",
       icon: Users,
       href: "/customers",
       roles: ["admin", "teller", "loan_officer", "field_agent"],
-      isActive: location.pathname === "/customers"
+      isActive: isActive("/customers")
     },
     {
       name: "Savings",
       icon: PiggyBank,
       href: "/savings",
       roles: ["admin", "teller"],
-      isActive: location.pathname === "/savings"
+      isActive: isActive("/savings")
     },
     {
       name: "Loans",
       icon: CreditCard,
       href: "/loans",
       roles: ["admin", "loan_officer"],
-      isActive: location.pathname === "/loans"
+      isActive: isActive("/loans")
     },
     {
       name: "Transactions",
       icon: FileText,
       href: "/transactions",
       roles: ["admin", "teller"],
-      isActive: location.pathname === "/transactions"
+      isActive: isActive("/transactions")
     },
     {
       name: "Reports",
       icon: BarChart2,
       href: "/reports",
       roles: ["admin"],
-      isActive: location.pathname === "/reports"
+      isActive: isActive("/reports")
     },
   ];
 
@@ -155,27 +160,27 @@ const ShadcnSidebar = () => {
     {
       name: "General Ledger",
       href: "/accounting/ledger",
-      isActive: location.pathname === "/accounting/ledger"
+      isActive: isActive("/accounting/ledger")
     },
     {
       name: "Chart of Accounts",
       href: "/accounting/chart-of-accounts",
-      isActive: location.pathname === "/accounting/chart-of-accounts"
+      isActive: isActive("/accounting/chart-of-accounts")
     },
     {
       name: "Journal Entries",
       href: "/accounting/journal-entries",
-      isActive: location.pathname === "/accounting/journal-entries"
+      isActive: isActive("/accounting/journal-entries")
     },
     {
       name: "Financial Reports",
       href: "/accounting/reports",
-      isActive: location.pathname === "/accounting/reports"
+      isActive: isActive("/accounting/reports")
     },
     {
       name: "Integrations",
       href: "/accounting/integrations",
-      isActive: location.pathname === "/accounting/integrations"
+      isActive: isActive("/accounting/integrations")
     },
   ];
 
@@ -183,22 +188,22 @@ const ShadcnSidebar = () => {
     {
       name: "General Settings",
       href: "/settings",
-      isActive: location.pathname === "/settings"
+      isActive: isActive("/settings")
     },
     {
       name: "User Roles",
       href: "/settings/roles",
-      isActive: location.pathname === "/settings/roles"
+      isActive: isActive("/settings/roles")
     },
     {
       name: "Data Sync",
       href: "/settings/sync",
-      isActive: location.pathname === "/settings/sync"
+      isActive: isActive("/settings/sync")
     },
     {
       name: "Backup",
       href: "/settings/backup",
-      isActive: location.pathname === "/settings/backup"
+      isActive: isActive("/settings/backup")
     },
   ];
 
@@ -206,11 +211,6 @@ const ShadcnSidebar = () => {
   const filteredMenuItems = mainMenuItems.filter(
     item => !userRole || item.roles.includes(userRole)
   );
-
-  // Check if the location starts with a specific path
-  const isInPath = (basePath: string) => {
-    return location.pathname.startsWith(basePath);
-  };
 
   // Accounting should be visible to admins
   const showAccounting = userRole === "admin";

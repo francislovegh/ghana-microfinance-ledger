@@ -1,6 +1,6 @@
 
 import { ReactNode, useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import LoadingSpinner from "../ui/LoadingSpinner";
@@ -16,6 +16,7 @@ const AuthGuard = ({
   requireAuth = true,
   requiredRoles = [] 
 }: AuthGuardProps) => {
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -80,7 +81,8 @@ const AuthGuard = ({
 
   // Handle auth redirects
   if (requireAuth && !session) {
-    return <Navigate to="/login" />;
+    // Save the current location they were trying to go to
+    return <Navigate to="/login" state={{ from: location }} />;
   }
 
   if (!requireAuth && session) {

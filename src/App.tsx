@@ -89,8 +89,18 @@ const App = () => (
               </AuthGuard>
             } 
           />
+          
+          {/* Settings Routes */}
           <Route 
             path="/settings" 
+            element={
+              <AuthGuard>
+                <Settings />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/settings/roles" 
             element={
               <AuthGuard>
                 <Settings />
