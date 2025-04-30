@@ -41,22 +41,120 @@ const App = () => (
           />
           
           {/* Protected Routes */}
-          <Route path="/" element={<Index />} />
-          <Route path="/customers" element={<Customers />} />
-          <Route path="/savings" element={<Savings />} />
-          <Route path="/loans" element={<Loans />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/sync" element={<Settings />} />
-          <Route path="/settings/backup" element={<Settings />} />
+          <Route 
+            path="/" 
+            element={
+              <AuthGuard>
+                <Index />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/customers" 
+            element={
+              <AuthGuard>
+                <Customers />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/savings" 
+            element={
+              <AuthGuard>
+                <Savings />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/loans" 
+            element={
+              <AuthGuard>
+                <Loans />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/transactions" 
+            element={
+              <AuthGuard>
+                <Transactions />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/reports" 
+            element={
+              <AuthGuard>
+                <Reports />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <AuthGuard>
+                <Settings />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/settings/sync" 
+            element={
+              <AuthGuard>
+                <Settings />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/settings/backup" 
+            element={
+              <AuthGuard>
+                <Settings />
+              </AuthGuard>
+            } 
+          />
           
           {/* Accounting Module Routes */}
-          <Route path="/accounting/ledger" element={<AccountingLedger />} />
-          <Route path="/accounting/chart-of-accounts" element={<ChartOfAccounts />} />
-          <Route path="/accounting/journal-entries" element={<JournalEntries />} />
-          <Route path="/accounting/reports" element={<AccountingReports />} />
-          <Route path="/accounting/integrations" element={<AccountingIntegrations />} />
+          <Route 
+            path="/accounting/ledger" 
+            element={
+              <AuthGuard>
+                <AccountingLedger />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/accounting/chart-of-accounts" 
+            element={
+              <AuthGuard>
+                <ChartOfAccounts />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/accounting/journal-entries" 
+            element={
+              <AuthGuard>
+                <JournalEntries />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/accounting/reports" 
+            element={
+              <AuthGuard>
+                <AccountingReports />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/accounting/integrations" 
+            element={
+              <AuthGuard>
+                <AccountingIntegrations />
+              </AuthGuard>
+            } 
+          />
           
           {/* Other Routes */}
           <Route path="/unauthorized" element={<Unauthorized />} />

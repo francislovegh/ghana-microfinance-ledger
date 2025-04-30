@@ -1,9 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
   Home,
@@ -78,6 +77,17 @@ const ShadcnSidebar = () => {
     
     checkUserRole();
   }, []);
+
+  // Check if current path is in accounting or settings to auto-expand menus
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes('/accounting')) {
+      setIsSubMenuOpen(prev => ({ ...prev, accounting: true }));
+    }
+    if (path.includes('/settings')) {
+      setIsSubMenuOpen(prev => ({ ...prev, settings: true }));
+    }
+  }, [location.pathname]);
 
   const handleSignOut = async () => {
     try {

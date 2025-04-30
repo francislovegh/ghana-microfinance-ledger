@@ -11,7 +11,7 @@ export interface DatePickerProps {
   date: Date | undefined
   onSelect: (date: Date | undefined) => void
   disabled?: boolean
-  className?: string // Added className prop
+  className?: string
 }
 
 export function DatePicker({ date, onSelect, disabled = false, className }: DatePickerProps) {
@@ -24,7 +24,7 @@ export function DatePicker({ date, onSelect, disabled = false, className }: Date
           className={cn(
             "w-full justify-start text-left font-normal",
             !date && "text-muted-foreground",
-            className // Added className to Button
+            className
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
