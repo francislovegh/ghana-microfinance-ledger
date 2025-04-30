@@ -89,3 +89,83 @@ export interface DeleteConfirmationModalProps {
   onConfirm: () => Promise<void>;
   customerName: string;
 }
+
+// Accounting module types
+export type AccountCategory = "asset" | "liability" | "equity" | "income" | "expense";
+
+export interface ChartOfAccountItem {
+  id: string;
+  code: string;
+  name: string;
+  category: AccountCategory;
+  description?: string;
+  is_active: boolean;
+  parent_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  entry_number: string;
+  description: string;
+  entry_date: string;
+  is_posted: boolean;
+  is_recurring: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  posted_at?: string | null;
+  posted_by?: string | null;
+  total_debit: number;
+  total_credit: number;
+  reference_number?: string;
+  source_document?: string;
+  branch_id?: string;
+}
+
+export interface JournalEntryLine {
+  id: string;
+  journal_entry_id: string;
+  account_id: string;
+  account: ChartOfAccountItem;
+  debit_amount: number | null;
+  credit_amount: number | null;
+  description?: string;
+  created_at: string;
+}
+
+export interface AutoPostingRule {
+  id: string;
+  event_type: string;
+  description: string;
+  is_active: boolean;
+  debit_account_id: string;
+  debit_account: ChartOfAccountItem;
+  credit_account_id: string;
+  credit_account: ChartOfAccountItem;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinancialReport {
+  id: string;
+  name: string;
+  report_type: "balance_sheet" | "income_statement" | "cash_flow" | "trial_balance";
+  start_date: string;
+  end_date: string;
+  created_by: string;
+  created_at: string;
+  report_data: any; // JSON data containing report details
+  branch_id?: string;
+}
+
+export interface AccountingIntegration {
+  id: string;
+  provider: "quickbooks" | "xero" | "csv" | "custom";
+  is_active: boolean;
+  config: any; // JSON configuration data
+  last_sync_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
