@@ -1,6 +1,6 @@
 
 import { ReactNode } from "react";
-import ShadcnSidebar from "./ShadcnSidebar";
+import Sidebar from "./Sidebar";
 import Header from "./Header";
 
 interface AppLayoutProps {
@@ -9,8 +9,8 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   return (
-    <div className="min-h-screen flex bg-gray-100 w-full">
-      <ShadcnSidebar />
+    <div className="min-h-screen flex bg-gray-100">
+      <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
