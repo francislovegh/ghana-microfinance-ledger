@@ -45,6 +45,7 @@ const AuthGuard = ({
             console.error("Error fetching user role:", profileError);
           } else if (profileData) {
             setUserRole(profileData.role);
+            console.log("User role:", profileData.role); // Debug log for role
           }
         }
         
@@ -89,6 +90,7 @@ const AuthGuard = ({
 
   // Handle role-based access
   if (session && requiredRoles.length > 0 && userRole && !requiredRoles.includes(userRole)) {
+    console.log(`Access denied: User role ${userRole} not in required roles [${requiredRoles.join(', ')}]`);
     return <Navigate to="/unauthorized" />;
   }
 

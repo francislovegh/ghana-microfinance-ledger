@@ -42,10 +42,40 @@ const App = () => (
           <Route path="/loans" element={<AuthGuard><Loans /></AuthGuard>} />
           <Route path="/transactions" element={<AuthGuard><Transactions /></AuthGuard>} />
           <Route path="/wallet" element={<AuthGuard><Wallet /></AuthGuard>} />
-          <Route path="/reports" element={<AuthGuard><Reports /></AuthGuard>} />
-          <Route path="/settings" element={<AuthGuard><Settings /></AuthGuard>} />
-          <Route path="/settings/sync" element={<AuthGuard><Settings /></AuthGuard>} />
-          <Route path="/settings/backup" element={<AuthGuard><Settings /></AuthGuard>} />
+          
+          {/* Admin-only Routes */}
+          <Route 
+            path="/reports" 
+            element={
+              <AuthGuard requiredRoles={["admin"]}>
+                <Reports />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/settings" 
+            element={
+              <AuthGuard requiredRoles={["admin"]}>
+                <Settings />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/settings/sync" 
+            element={
+              <AuthGuard requiredRoles={["admin"]}>
+                <Settings />
+              </AuthGuard>
+            } 
+          />
+          <Route 
+            path="/settings/backup" 
+            element={
+              <AuthGuard requiredRoles={["admin"]}>
+                <Settings />
+              </AuthGuard>
+            } 
+          />
           
           {/* Other Routes */}
           <Route path="/unauthorized" element={<Unauthorized />} />
