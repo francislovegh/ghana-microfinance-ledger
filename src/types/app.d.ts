@@ -49,6 +49,14 @@ export interface Transaction {
   metadata?: Record<string, any> | null;
 }
 
+// Define interface for TransferMetadata
+export interface TransferMetadata {
+  source_account: string;
+  destination_account: string;
+  source_customer: string;
+  destination_customer: string;
+}
+
 export interface LoanGuarantor {
   id: string; 
   loan_id: string;

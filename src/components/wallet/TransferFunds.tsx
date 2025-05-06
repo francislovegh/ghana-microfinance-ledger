@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { TransactionType } from "@/types/app";
+import { TransactionType, TransferMetadata } from "@/types/app";
 
 interface SavingsAccount {
   id: string;
@@ -116,18 +116,18 @@ const TransferFunds = () => {
       
       // Process transfers using the metadata column
       const processedTransfers = data.map((transaction) => {
-        const metadata = transaction.metadata || {};
+        const meta = transaction.metadata as TransferMetadata | null;
         
         return {
           id: transaction.id,
-          source_account: metadata.source_account || "Unknown account",
-          destination_account: metadata.destination_account || "Unknown account",
+          source_account: meta?.source_account || "Unknown account",
+          destination_account: meta?.destination_account || "Unknown account",
           amount: transaction.amount,
           transaction_number: transaction.transaction_number,
           description: transaction.description || "Fund transfer",
           created_at: transaction.created_at,
-          source_customer: metadata.source_customer || "Source Customer",
-          destination_customer: metadata.destination_customer || "Destination Customer"
+          source_customer: meta?.source_customer || "Source Customer",
+          destination_customer: meta?.destination_customer || "Destination Customer"
         };
       });
       
@@ -190,7 +190,7 @@ const TransferFunds = () => {
       if (numberError) throw numberError;
       
       // Store metadata about the transfer
-      const transferMetadata = {
+      const transferMetadata: TransferMetadata = {
         source_account: source.account_number,
         destination_account: destination.account_number,
         source_customer: source.profiles.full_name,
