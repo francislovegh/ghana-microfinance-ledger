@@ -46,14 +46,17 @@ const CustomersPage = () => {
         .eq("role", "customer")
         .order("full_name");
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching customers:", error);
+        throw error;
+      }
 
       setCustomers(data as Customer[]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching customers:", error);
       toast({
         title: "Error",
-        description: "Failed to load customers",
+        description: "Failed to load customers: " + (error.message || "Unknown error"),
         variant: "destructive",
       });
     } finally {
@@ -110,11 +113,11 @@ const CustomersPage = () => {
       });
 
       fetchCustomers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting customer:", error);
       toast({
         title: "Error",
-        description: "Failed to delete customer",
+        description: "Failed to delete customer: " + (error.message || "Unknown error"),
         variant: "destructive",
       });
     } finally {

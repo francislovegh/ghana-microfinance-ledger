@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -121,9 +120,10 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
       }
 
       if (error) {
+        console.error("Error saving customer:", error);
         toast({
           title: "Error",
-          description: error.message,
+          description: error.message || "Failed to save customer",
           variant: "destructive",
         });
       } else {
@@ -135,11 +135,11 @@ const CustomerModal = ({ isOpen, onClose, onSave, customer }: CustomerModalProps
         });
         onSave();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Unexpected error:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred: " + (error.message || "Unknown error"),
         variant: "destructive",
       });
     } finally {

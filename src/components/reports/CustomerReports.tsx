@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { DateRange } from "@/components/ui/date-range-picker";
@@ -44,110 +43,124 @@ const CustomerReports = ({ dateRange }: CustomerReportsProps) => {
   const { isLoading, error, data } = useQuery({
     queryKey: ['customerReports', dateRange],
     queryFn: async (): Promise<CustomerData> => {
-      // Get customer data
-      const { data: customers, error: customersError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'customer')
-        .gte('created_at', dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : '')
-        .lte('created_at', dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : '');
+      try {
+        // Get customer data
+        const { data: customers, error: customersError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('role', 'customer')
+          .gte('created_at', dateRange.from ? format(dateRange.from, 'yyyy-MM-dd') : '')
+          .lte('created_at', dateRange.to ? format(dateRange.to, 'yyyy-MM-dd') : '');
+          
+        if (customersError) {
+          console.error("Error fetching customers:", customersError);
+          throw customersError;
+        }
         
-      if (customersError) throw customersError;
-      
-      // Get savings accounts data
-      const { data: savingsAccounts, error: savingsError } = await supabase
-        .from('savings_accounts')
-        .select('user_id, balance');
+        // Get savings accounts data
+        const { data: savingsAccounts, error: savingsError } = await supabase
+          .from('savings_accounts')
+          .select('user_id, balance');
+          
+        if (savingsError) {
+          console.error("Error fetching savings accounts:", savingsError);
+          throw savingsError;
+        }
         
-      if (savingsError) throw savingsError;
-      
-      // Get loans data
-      const { data: loans, error: loansError } = await supabase
-        .from('loans')
-        .select('user_id, amount, remaining_balance');
+        // Get loans data
+        const { data: loans, error: loansError } = await supabase
+          .from('loans')
+          .select('user_id, amount, remaining_balance');
+          
+        if (loansError) {
+          console.error("Error fetching loans:", loansError);
+          throw loansError;
+        }
         
-      if (loansError) throw loansError;
-      
-      // Calculate customer statistics
-      const totalCustomers = customers.length;
-      const newCustomers = customers.filter(c => 
-        new Date(c.created_at) >= (dateRange.from || new Date(0)) && 
-        new Date(c.created_at) <= (dateRange.to || new Date())
-      ).length;
-      
-      // Get unique customers with savings
-      const customersWithSavingsIds = new Set(savingsAccounts.map(a => a.user_id));
-      const customersWithSavings = customersWithSavingsIds.size;
-      
-      // Get unique customers with loans
-      const customersWithLoansIds = new Set(loans.map(l => l.user_id));
-      const customersWithLoans = customersWithLoansIds.size;
-      
-      // Count ID types
-      const idTypesDistribution = Object.entries(
-        customers.reduce((acc: Record<string, any>, customer) => {
-          const idType = customer.id_type || 'none';
-          if (!acc[idType]) {
-            acc[idType] = {
-              id_type: customer.id_type,
-              count: 0,
-            };
-          }
-          acc[idType].count += 1;
-          return acc;
-        }, {})
-      ).map(([_, value]) => value);
-      
-      // Process customer data with savings and loans information
-      const processedCustomers = customers.map(customer => {
-        const hasSavings = savingsAccounts.some(a => a.user_id === customer.id);
-        const hasLoans = loans.some(l => l.user_id === customer.id);
+        // Calculate customer statistics
+        const totalCustomers = customers.length;
+        const newCustomers = customers.filter(c => 
+          new Date(c.created_at) >= (dateRange.from || new Date(0)) && 
+          new Date(c.created_at) <= (dateRange.to || new Date())
+        ).length;
+        
+        // Get unique customers with savings
+        const customersWithSavingsIds = new Set(savingsAccounts.map(a => a.user_id));
+        const customersWithSavings = customersWithSavingsIds.size;
+        
+        // Get unique customers with loans
+        const customersWithLoansIds = new Set(loans.map(l => l.user_id));
+        const customersWithLoans = customersWithLoansIds.size;
+        
+        // Count ID types
+        const idTypesDistribution = Object.entries(
+          customers.reduce((acc: Record<string, any>, customer) => {
+            const idType = customer.id_type || 'none';
+            if (!acc[idType]) {
+              acc[idType] = {
+                id_type: customer.id_type,
+                count: 0,
+              };
+            }
+            acc[idType].count += 1;
+            return acc;
+          }, {})
+        ).map(([_, value]) => value);
+        
+        // Process customer data with savings and loans information
+        const processedCustomers = customers.map(customer => {
+          const hasSavings = savingsAccounts.some(a => a.user_id === customer.id);
+          const hasLoans = loans.some(l => l.user_id === customer.id);
+          
+          return {
+            ...customer,
+            has_savings: hasSavings,
+            has_loans: hasLoans
+          };
+        });
+        
+        // Get recent customers
+        const recentCustomers = processedCustomers
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5);
+        
+        // Calculate top customers by total financial activity
+        const customerFinancials = customers.map(customer => {
+          const customerSavings = savingsAccounts
+            .filter(a => a.user_id === customer.id)
+            .reduce((sum, a) => sum + a.balance, 0);
+            
+          const customerLoans = loans
+            .filter(l => l.user_id === customer.id)
+            .reduce((sum, l) => sum + l.amount, 0);
+            
+          return {
+            id: customer.id,
+            full_name: customer.full_name,
+            phone_number: customer.phone_number,
+            total_savings: customerSavings,
+            total_loans: customerLoans
+          };
+        });
+        
+        // Sort by total financial activity (savings + loans)
+        const topCustomers = customerFinancials
+          .sort((a, b) => (b.total_savings + b.total_loans) - (a.total_savings + a.total_loans))
+          .slice(0, 5);
         
         return {
-          ...customer,
-          has_savings: hasSavings,
-          has_loans: hasLoans
+          totalCustomers,
+          newCustomers,
+          customersWithSavings,
+          customersWithLoans,
+          idTypesDistribution,
+          recentCustomers,
+          topCustomers
         };
-      });
-      
-      // Get recent customers
-      const recentCustomers = processedCustomers
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5);
-      
-      // Calculate top customers by total financial activity
-      const customerFinancials = customers.map(customer => {
-        const customerSavings = savingsAccounts
-          .filter(a => a.user_id === customer.id)
-          .reduce((sum, a) => sum + a.balance, 0);
-          
-        const customerLoans = loans
-          .filter(l => l.user_id === customer.id)
-          .reduce((sum, l) => sum + l.amount, 0);
-          
-        return {
-          id: customer.id,
-          full_name: customer.full_name,
-          phone_number: customer.phone_number,
-          total_savings: customerSavings,
-          total_loans: customerLoans
-        };
-      });
-      
-      // Sort by total financial activity (savings + loans)
-      const topCustomers = customerFinancials
-        .sort((a, b) => (b.total_savings + b.total_loans) - (a.total_savings + a.total_loans))
-        .slice(0, 5);
-      
-      return {
-        totalCustomers,
-        newCustomers,
-        customersWithSavings,
-        customersWithLoans,
-        idTypesDistribution,
-        recentCustomers,
-        topCustomers
-      };
+      } catch (error: any) {
+        console.error("Error in customer reports query:", error);
+        throw new Error(error.message || "Failed to load customer reports");
+      }
     }
   });
   
@@ -165,7 +178,7 @@ const CustomerReports = ({ dateRange }: CustomerReportsProps) => {
     </div>
   );
   
-  if (error) return <div className="text-red-500">Error loading customer reports</div>;
+  if (error) return <div className="text-red-500">Error loading customer reports: {(error as Error).message}</div>;
   
   if (!data) return <div>No data available</div>;
 

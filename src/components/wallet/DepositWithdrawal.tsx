@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,15 +49,16 @@ const DepositWithdrawal = () => {
         .order('created_at', { ascending: false });
       
       if (error) {
+        console.error('Error fetching accounts:', error);
         throw error;
       }
       
       setAccounts(data as SavingsAccount[]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching accounts:', error);
       toast({
         title: "Error",
-        description: "Failed to load accounts. Please try again later.",
+        description: "Failed to load accounts: " + (error.message || "Unknown error"),
         variant: "destructive",
       });
     } finally {
