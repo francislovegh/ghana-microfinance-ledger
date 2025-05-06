@@ -388,6 +388,7 @@ export type Database = {
           description: string | null
           id: string
           loan_id: string | null
+          metadata: Json | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           performed_by: string
           reference_number: string | null
@@ -403,6 +404,7 @@ export type Database = {
           description?: string | null
           id?: string
           loan_id?: string | null
+          metadata?: Json | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           performed_by: string
           reference_number?: string | null
@@ -418,6 +420,7 @@ export type Database = {
           description?: string | null
           id?: string
           loan_id?: string | null
+          metadata?: Json | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           performed_by?: string
           reference_number?: string | null
@@ -499,6 +502,7 @@ export type Database = {
         | "loan_repayment"
         | "interest_payment"
         | "penalty_payment"
+        | "transfer"
       user_role:
         | "admin"
         | "teller"
@@ -644,6 +648,7 @@ export const Constants = {
         "loan_repayment",
         "interest_payment",
         "penalty_payment",
+        "transfer",
       ],
       user_role: ["admin", "teller", "loan_officer", "field_agent", "customer"],
     },

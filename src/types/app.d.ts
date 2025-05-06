@@ -46,6 +46,7 @@ export interface Transaction {
   created_at: string;
   performed_by: string;
   profiles: TransactionProfile;
+  metadata?: Record<string, any> | null;
 }
 
 export interface LoanGuarantor {

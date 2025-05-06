@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,7 +89,6 @@ const TransferFunds = () => {
     try {
       setTransfersLoading(true);
       
-      // Type cast to ensure compatibility
       const transactionType: TransactionType = "transfer";
       
       const { data, error } = await supabase
@@ -101,6 +101,7 @@ const TransferFunds = () => {
           created_at,
           user_id,
           performed_by,
+          metadata,
           performed_by_profile:profiles!transactions_performed_by_fkey(full_name)
         `)
         .eq('transaction_type', transactionType)
@@ -113,20 +114,20 @@ const TransferFunds = () => {
         throw new Error('No data returned');
       }
       
-      // For now, just create some dummy transfer data until the metadata issue is resolved
-      const processedTransfers = data.map((transfer, index) => {
-        // Since we don't have the metadata column with source and destination account
-        // information, we'll use placeholder values
+      // Process transfers using the metadata column
+      const processedTransfers = data.map((transaction) => {
+        const metadata = transaction.metadata || {};
+        
         return {
-          id: transfer.id,
-          source_account: "Account #" + (10000 + index*2),
-          destination_account: "Account #" + (10000 + index*2 + 1),
-          amount: transfer.amount,
-          transaction_number: transfer.transaction_number,
-          description: transfer.description || "Fund transfer",
-          created_at: transfer.created_at,
-          source_customer: "Source Customer",
-          destination_customer: "Destination Customer"
+          id: transaction.id,
+          source_account: metadata.source_account || "Unknown account",
+          destination_account: metadata.destination_account || "Unknown account",
+          amount: transaction.amount,
+          transaction_number: transaction.transaction_number,
+          description: transaction.description || "Fund transfer",
+          created_at: transaction.created_at,
+          source_customer: metadata.source_customer || "Source Customer",
+          destination_customer: metadata.destination_customer || "Destination Customer"
         };
       });
       
@@ -188,6 +189,14 @@ const TransferFunds = () => {
       
       if (numberError) throw numberError;
       
+      // Store metadata about the transfer
+      const transferMetadata = {
+        source_account: source.account_number,
+        destination_account: destination.account_number,
+        source_customer: source.profiles.full_name,
+        destination_customer: destination.profiles.full_name
+      };
+      
       // Create transfer transaction
       const { error: transferError } = await supabase
         .from('transactions')
@@ -198,7 +207,8 @@ const TransferFunds = () => {
           payment_method: 'cash', // Using cash as default since we don't have an internal type
           transaction_number: transactionNumber,
           description: description || `Transfer from ${source.account_number} to ${destination.account_number}`,
-          performed_by: (await supabase.auth.getUser()).data.user?.id || ""
+          performed_by: (await supabase.auth.getUser()).data.user?.id || "",
+          metadata: transferMetadata
         });
         
       if (transferError) throw transferError;

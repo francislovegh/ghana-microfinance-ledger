@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,7 @@ const FieldAgentOperations = () => {
           amount,
           created_at,
           status,
+          metadata,
           performed_by_profile:profiles!transactions_performed_by_fkey(full_name)
         `)
         .eq('transaction_type', 'deposit')

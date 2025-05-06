@@ -84,6 +84,14 @@ const WalletOverview = () => {
               bankBalance -= transaction.amount;
             }
           }
+          
+          // Handle transfers separately since they're now a valid transaction type
+          if (transaction.transaction_type === "transfer") {
+            // For simplicity, we're not affecting the total balance with transfers
+            // as they're internal movements of money
+            
+            // You might want to update this logic based on your specific business rules
+          }
         });
         
         const totalBalance = totalDeposits - totalWithdrawals;
