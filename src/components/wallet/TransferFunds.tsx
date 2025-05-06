@@ -118,7 +118,12 @@ const TransferFunds = () => {
       const processedTransfers = data.map((transaction) => {
         // Safely handle the metadata conversion with type checking
         const rawMeta = transaction.metadata;
-        let meta: TransferMetadata | null = null;
+        let meta = {
+          source_account: "Unknown account", 
+          destination_account: "Unknown account",
+          source_customer: "Source Customer",
+          destination_customer: "Destination Customer"
+        };
         
         // Check if metadata is an object and has the required properties
         if (rawMeta && 
@@ -128,19 +133,25 @@ const TransferFunds = () => {
             'destination_account' in rawMeta && 
             'source_customer' in rawMeta && 
             'destination_customer' in rawMeta) {
-          meta = rawMeta as TransferMetadata;
+          // Use type-safe property access with string indexing
+          meta = {
+            source_account: String(rawMeta.source_account),
+            destination_account: String(rawMeta.destination_account),
+            source_customer: String(rawMeta.source_customer),
+            destination_customer: String(rawMeta.destination_customer)
+          };
         }
         
         return {
           id: transaction.id,
-          source_account: meta?.source_account || "Unknown account",
-          destination_account: meta?.destination_account || "Unknown account",
+          source_account: meta.source_account,
+          destination_account: meta.destination_account,
           amount: transaction.amount,
           transaction_number: transaction.transaction_number,
           description: transaction.description || "Fund transfer",
           created_at: transaction.created_at,
-          source_customer: meta?.source_customer || "Source Customer",
-          destination_customer: meta?.destination_customer || "Destination Customer"
+          source_customer: meta.source_customer,
+          destination_customer: meta.destination_customer
         };
       });
       
@@ -202,8 +213,8 @@ const TransferFunds = () => {
       
       if (numberError) throw numberError;
       
-      // Store metadata about the transfer
-      const transferMetadata: TransferMetadata = {
+      // Store metadata about the transfer - creating a plain object that conforms to Json type
+      const transferMetadata = {
         source_account: source.account_number,
         destination_account: destination.account_number,
         source_customer: source.profiles.full_name,
