@@ -474,6 +474,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: string
+      }
       process_loan_payment: {
         Args: { p_loan_id: string; p_amount: number; p_payment_date?: string }
         Returns: number

@@ -45,7 +45,7 @@ const AuthGuard = ({
             console.error("Error fetching user role:", profileError);
           } else if (profileData) {
             setUserRole(profileData.role);
-            console.log("User role:", profileData.role); // Debug log for role
+            console.log("User role:", profileData.role);
           }
         }
         

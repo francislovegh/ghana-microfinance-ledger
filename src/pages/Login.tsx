@@ -20,7 +20,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -32,6 +32,33 @@ const Login = () => {
           variant: "destructive",
         });
         return;
+      }
+
+      // Check if the user exists in profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user?.id)
+        .single();
+
+      // If no profile exists, create one with admin role
+      if (profileError && email === "phydanprintingpress@gmail.com") {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user?.id,
+            email: data.user?.email,
+            full_name: "Admin User",
+            phone_number: "1234567890", // Default placeholder phone number
+            role: "admin",
+            is_verified: true
+          });
+
+        if (insertError) {
+          console.error("Error creating admin profile:", insertError);
+        } else {
+          console.log("Created admin profile");
+        }
       }
 
       toast({

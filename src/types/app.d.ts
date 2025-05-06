@@ -49,12 +49,13 @@ export interface Transaction {
   metadata?: Record<string, any> | null;
 }
 
-// Define interface for TransferMetadata
+// Define interface for TransferMetadata - using Record<string, any> to make it compatible with Json type
 export interface TransferMetadata {
   source_account: string;
   destination_account: string;
   source_customer: string;
   destination_customer: string;
+  [key: string]: any; // Add index signature to make it compatible with JSON type
 }
 
 export interface LoanGuarantor {
