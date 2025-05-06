@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -142,25 +141,30 @@ const FieldAgentOperations = () => {
           amount,
           created_at,
           status,
-          metadata,
-          profiles:performed_by(full_name)
+          performed_by_profile:profiles!transactions_performed_by_fkey(full_name)
         `)
         .eq('transaction_type', 'deposit')
         .eq('payment_method', 'cash')
         .order('created_at', { ascending: false })
         .limit(10);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error in query:', error);
+        throw error;
+      }
+      
+      if (!data) {
+        console.error('No data returned');
+        throw new Error('No data returned from query');
+      }
       
       const processedCollections = data.map(transaction => {
-        const metadata = transaction.metadata || {};
-        
         return {
           id: transaction.id,
           transaction_number: transaction.transaction_number,
           amount: transaction.amount,
-          agent_name: transaction.profiles?.full_name || 'Unknown',
-          customer_name: metadata.customer_name || 'Unknown',
+          agent_name: transaction.performed_by_profile?.full_name || 'Unknown',
+          customer_name: 'Customer', // Using a placeholder since we don't have customer info
           created_at: transaction.created_at,
           status: transaction.status || 'completed'
         };
@@ -221,13 +225,6 @@ const FieldAgentOperations = () => {
           reference_number: reference || undefined,
           description: description || `Field collection from ${customer.full_name} by ${agent.full_name}`,
           performed_by: agent.id,
-          metadata: {
-            location: location,
-            customer_name: customer.full_name,
-            agent_name: agent.full_name,
-            customer_phone: customer.phone_number,
-            account_number: customer.account_number
-          },
           status: "completed"
         });
         

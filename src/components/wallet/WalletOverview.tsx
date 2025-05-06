@@ -6,6 +6,7 @@ import { Banknote, ArrowDown, ArrowUp, CreditCard, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { TransactionType } from "@/types/app";
 
 interface WalletStats {
   totalBalance: number;
@@ -45,7 +46,7 @@ const WalletOverview = () => {
           .from("transactions")
           .select(`
             *,
-            profiles:user_id(full_name)
+            performed_by_profile:profiles!transactions_performed_by_fkey(full_name)
           `)
           .gte('created_at', format(startDate, 'yyyy-MM-dd'))
           .order('created_at', { ascending: false });
@@ -104,7 +105,7 @@ const WalletOverview = () => {
             acc[date].deposits += transaction.amount;
           } else if (withdrawalTypes.includes(transaction.transaction_type)) {
             acc[date].withdrawals += transaction.amount;
-          } else if (transaction.transaction_type === 'transfer') {
+          } else if (transaction.transaction_type === "transfer") {
             acc[date].transfers += transaction.amount;
           }
           
@@ -123,7 +124,7 @@ const WalletOverview = () => {
           transaction_type: transaction.transaction_type,
           payment_method: transaction.payment_method,
           created_at: transaction.created_at,
-          customer_name: transaction.profiles?.full_name || "Unknown"
+          customer_name: transaction.performed_by_profile?.full_name || "Unknown"
         }));
         
         setStats({

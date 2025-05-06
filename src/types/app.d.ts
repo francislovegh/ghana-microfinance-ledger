@@ -49,7 +49,7 @@ export interface Transaction {
 }
 
 export interface LoanGuarantor {
-  id: string; // Added id property which was missing in the type definition
+  id: string; 
   loan_id: string;
   full_name: string;
   phone_number: string;
