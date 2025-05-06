@@ -116,7 +116,20 @@ const TransferFunds = () => {
       
       // Process transfers using the metadata column
       const processedTransfers = data.map((transaction) => {
-        const meta = transaction.metadata as TransferMetadata | null;
+        // Safely handle the metadata conversion with type checking
+        const rawMeta = transaction.metadata;
+        let meta: TransferMetadata | null = null;
+        
+        // Check if metadata is an object and has the required properties
+        if (rawMeta && 
+            typeof rawMeta === 'object' && 
+            !Array.isArray(rawMeta) &&
+            'source_account' in rawMeta && 
+            'destination_account' in rawMeta && 
+            'source_customer' in rawMeta && 
+            'destination_customer' in rawMeta) {
+          meta = rawMeta as TransferMetadata;
+        }
         
         return {
           id: transaction.id,
@@ -197,13 +210,13 @@ const TransferFunds = () => {
         destination_customer: destination.profiles.full_name
       };
       
-      // Create transfer transaction
+      // Create transfer transaction - fix the insert call
       const { error: transferError } = await supabase
         .from('transactions')
         .insert({
           user_id: source.user_id,
           amount: amount,
-          transaction_type: "transfer" as TransactionType,
+          transaction_type: "transfer",
           payment_method: 'cash', // Using cash as default since we don't have an internal type
           transaction_number: transactionNumber,
           description: description || `Transfer from ${source.account_number} to ${destination.account_number}`,
